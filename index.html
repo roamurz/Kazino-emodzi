@@ -1,0 +1,1878 @@
+```html
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Эмодзи-Казино</title>
+  <!-- Подключение Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Подключение шрифта Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    /* Адаптация под мобильный экран без вертикальной прокрутки */
+    html, body {
+      height: 100dvh;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #0d0d11;
+      color: #fafafa;
+      overflow: hidden;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Кастомный слайдер выбора N */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 7px;
+      border-radius: 999px;
+      background: #27272a;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      margin-top: -7px;
+      background-color: #fafafa;
+      height: 21px;
+      width: 21px;
+      border-radius: 50%;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+      transition: transform 0.15s ease;
+    }
+
+    input[type="range"]:not(:disabled)::-webkit-slider-thumb:active {
+      transform: scale(1.18);
+    }
+
+    input[type="range"]:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* Размытие при быстром вращении барабана */
+    .slot-spinning {
+      filter: blur(2px);
+      transform: scale(0.92);
+      opacity: 0.85;
+    }
+
+    /* Упругая остановка барабана */
+    @keyframes popStop {
+    /* Размытие при вращении барабана (мягкое, чтобы эмодзи оставались читаемыми) */
+    .slot-spinning {
+      filter: blur(0.6px);
+      transform: scale(0.95);
+      opacity: 0.94;
+    }
+
+    /* Упругая остановка барабана */
+    @keyframes popStop {
+      0% {
+        transform: translateY(-14px) scale(0.85);
+        filter: blur(0.5px);
+      }
+      65% {
+        transform: translateY(4px) scale(1.08);
+        filter: blur(0);
+      }
+      100% {
+        transform: translateY(0) scale(1);
+        filter: blur(0);
+      }
+    }
+
+    .slot-landed {
+      animation: popStop 0.26s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    /* Дрожь и золотисто-красное свечение 3-го слота при саспенсе */
+    @keyframes suspenseShake {
+      0%, 100% {
+        border-color: #ef4444;
+        box-shadow: 0 0 26px rgba(239, 68, 68, 0.55), inset 0 0 16px rgba(239, 68, 68, 0.35);
+        transform: scale(1.03) translate(-1.5px, 1px) rotate(-0.8deg);
+      }
+      25% {
+        border-color: #f59e0b;
+        box-shadow: 0 0 38px rgba(245, 158, 11, 0.85), inset 0 0 22px rgba(245, 158, 11, 0.45);
+        transform: scale(1.05) translate(1.5px, -1px) rotate(0.8deg);
+      }
+      50% {
+        border-color: #dc2626;
+        box-shadow: 0 0 44px rgba(220, 38, 38, 0.95), inset 0 0 24px rgba(220, 38, 38, 0.5);
+        transform: scale(1.04) translate(-1px, -1.5px) rotate(-0.5deg);
+      }
+      75% {
+        border-color: #fde047;
+        box-shadow: 0 0 36px rgba(250, 204, 21, 0.8), inset 0 0 18px rgba(250, 204, 21, 0.4);
+        transform: scale(1.05) translate(1px, 1.5px) rotate(0.6deg);
+      }
+    }
+
+    .slot-suspense {
+      animation: suspenseShake 0.16s infinite ease-in-out;
+      background-color: rgba(153, 27, 27, 0.25);
+    }
+
+    /* Победная зелёная подсветка */
+    @keyframes winGlow {
+      0%, 100% {
+        border-color: rgba(52, 211, 153, 0.85);
+        box-shadow: 0 0 22px rgba(16, 185, 129, 0.35);
+      }
+      50% {
+        border-color: rgba(110, 231, 183, 1);
+        box-shadow: 0 0 36px rgba(16, 185, 129, 0.6);
+      }
+    }
+
+    .slot-win {
+      animation: winGlow 1.2s infinite ease-in-out;
+      background-color: rgba(16, 185, 129, 0.14);
+    }
+
+    /* Пульсирующая багрово-чёрная виньетка саспенса */
+    @keyframes vignettePulse {
+      0%, 100% {
+        opacity: 0.78;
+        box-shadow: inset 0 0 80px 34px rgba(127, 29, 29, 0.78), inset 0 0 140px 65px rgba(0, 0, 0, 0.94);
+      }
+      50% {
+        opacity: 1;
+        box-shadow: inset 0 0 110px 48px rgba(220, 38, 38, 0.9), inset 0 0 175px 80px rgba(0, 0, 0, 0.98);
+      }
+    }
+
+    .vignette-active {
+      animation: vignettePulse 0.6s infinite ease-in-out;
+    }
+
+    /* Вспышки комбо х1, х2!, х3!!!! */
+    @keyframes comboPopFade {
+      0% {
+        opacity: 0;
+        transform: scale(0.35) rotate(-6deg);
+      }
+      22% {
+        opacity: 1;
+        transform: scale(1.12) rotate(2deg);
+      }
+      38% {
+        opacity: 1;
+        transform: scale(1) rotate(0deg);
+      }
+      76% {
+        opacity: 1;
+        transform: scale(1.04) translateY(-4px);
+      }
+      100% {
+        opacity: 0;
+        transform: scale(1.3) translateY(-16px);
+      }
+    }
+
+    .combo-animate {
+      animation: comboPopFade 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes comboJackpotExplosion {
+      0% {
+        opacity: 0;
+        transform: scale(0.25) rotate(-10deg);
+      }
+      18% {
+        opacity: 1;
+        transform: scale(1.22) rotate(3deg);
+      }
+      32% {
+        opacity: 1;
+        transform: scale(1.05) rotate(-1deg);
+      }
+      78% {
+        opacity: 1;
+        transform: scale(1.1) translateY(-6px);
+      }
+      100% {
+        opacity: 0;
+        transform: scale(1.45) translateY(-22px);
+      }
+    }
+
+    .combo-jackpot-animate {
+      animation: comboJackpotExplosion 1.1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    /* Лёгкая тряска экрана */
+    @keyframes screenShake {
+      0%, 100% { transform: translate(0, 0) rotate(0deg); }
+      15% { transform: translate(-5px, 4px) rotate(-0.6deg); }
+      30% { transform: translate(5px, -4px) rotate(0.6deg); }
+      45% { transform: translate(-4px, -3px) rotate(-0.4deg); }
+      60% { transform: translate(4px, 3px) rotate(0.4deg); }
+      75% { transform: translate(-2px, 2px) rotate(-0.2deg); }
+    }
+
+    .shake-screen {
+      animation: screenShake 0.38s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+    }
+
+    /* Встряска карточки капчи при неверном ответе */
+    @keyframes errorWiggle {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-6px); }
+      40% { transform: translateX(6px); }
+      60% { transform: translateX(-4px); }
+      80% { transform: translateX(4px); }
+    }
+
+    .error-wiggle {
+      animation: errorWiggle 0.35s ease-in-out;
+    }
+
+    /* Пульсация кнопки Додеп, когда не хватает денег */
+    @keyframes dodepPulse {
+      0%, 100% {
+        border-color: rgba(251, 191, 36, 0.45);
+        box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.15);
+      }
+      50% {
+        border-color: rgba(251, 191, 36, 0.95);
+        box-shadow: 0 0 16px 2px rgba(251, 191, 36, 0.25);
+      }
+    }
+
+    .dodep-attention {
+      animation: dodepPulse 1.6s infinite ease-in-out;
+      color: #fde68a;
+    }
+
+    /* Убираем стандартные стрелки у числового инпута ставки */
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input[type="number"] {
+      -moz-appearance: textfield;
+    }
+  </style>
+</head>
+<body class="flex items-center justify-center p-3 sm:p-4">
+
+  <!-- Основной контейнер приложения, вмещающийся в 100dvh -->
+  <main id="appContainer" class="w-full max-w-md h-full max-h-[760px] flex flex-col justify-center">
+
+    <!-- 1. Верхняя панель: Баланс, звук и кнопки выбора ставки (включая свою ставку) -->
+    <section class="w-full bg-zinc-900/95 border border-zinc-800 rounded-2xl p-2.5 sm:p-3.5 mb-2 flex items-center justify-between gap-1.5 shadow-lg">
+      <div class="flex items-center gap-1.5 shrink-0">
+        <div class="flex flex-col">
+          <span class="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Баланс</span>
+          <div class="flex items-baseline gap-1">
+            <span id="balanceValue" class="text-lg sm:text-2xl font-black tracking-tight text-white">$100</span>
+            <span id="balanceDelta" class="text-[11px] font-bold opacity-0 transition-opacity duration-300">+$0</span>
+          </div>
+        </div>
+        <!-- Кнопка переключения звука -->
+        <button
+          id="soundToggleBtn"
+          type="button"
+          title="Включить или выключить звук"
+          aria-label="Переключить звук"
+          class="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-zinc-950 border border-zinc-800 hover:border-zinc-700 flex items-center justify-center text-xs sm:text-sm text-zinc-200 transition-colors cursor-pointer shrink-0"
+        >
+          🔊
+        </button>
+      </div>
+
+      <!-- Кнопки-таблетки выбора ставки + поле произвольной суммы -->
+      <div class="flex items-center bg-zinc-950 border border-zinc-800 rounded-xl p-1 gap-0.5 sm:gap-1 min-w-0">
+        <button type="button" data-bet="5" class="bet-pill px-1.5 sm:px-2 py-1.5 rounded-lg text-[11px] sm:text-xs font-bold text-zinc-400 hover:text-white transition-colors cursor-pointer">$5</button>
+        <button type="button" data-bet="10" class="bet-pill px-1.5 sm:px-2 py-1.5 rounded-lg text-[11px] sm:text-xs font-bold bg-zinc-800 text-white transition-colors cursor-pointer">$10</button>
+        <button type="button" data-bet="25" class="bet-pill px-1.5 sm:px-2 py-1.5 rounded-lg text-[11px] sm:text-xs font-bold text-zinc-400 hover:text-white transition-colors cursor-pointer">$25</button>
+        <button type="button" data-bet="MAX" class="bet-pill px-1.5 sm:px-2 py-1.5 rounded-lg text-[11px] sm:text-xs font-bold text-zinc-400 hover:text-white transition-colors cursor-pointer">MAX</button>
+        <input
+          id="customBetInput"
+          type="number"
+          min="1"
+          step="1"
+          inputmode="numeric"
+          placeholder="Своя"
+          aria-label="Своя ставка в долларах"
+          class="w-12 sm:w-14 px-1.5 py-1 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-zinc-500 focus:outline-none text-[11px] sm:text-xs font-bold text-white placeholder-zinc-500 text-center transition-colors"
+        />
+      </div>
+    </section>
+
+    <!-- 2. Блок настройки сложности (тумблер N) и шансов -->
+    <section class="w-full bg-zinc-900/95 border border-zinc-800 rounded-2xl p-3 sm:p-3.5 mb-2.5 shadow-lg">
+      <div class="flex items-center justify-between mb-1">
+        <label for="nSlider" class="text-xs sm:text-sm font-semibold text-zinc-300">
+          Кол-во эмодзи (N): <span id="nDisplay" class="text-white font-extrabold text-base ml-1">5</span>
+        </label>
+        <span id="payoutBadge" class="text-xs font-extrabold px-2.5 py-0.5 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/25">
+          x25 ($250)
+        </span>
+      </div>
+
+      <input
+        id="nSlider"
+        type="range"
+        min="2"
+        max="10"
+        value="5"
+        step="1"
+        class="w-full my-1"
+      />
+
+      <div class="mt-1.5 pt-2 border-t border-zinc-800/80 flex items-center justify-between gap-2">
+        <div id="activeEmojisRow" class="flex items-center gap-1 text-sm sm:text-base overflow-hidden">
+          <!-- Активные эмодзи рендерятся через JS -->
+        </div>
+        <span id="chanceBadge" class="text-[11px] font-medium text-zinc-400 shrink-0">
+          Шанс: 4% (x25)
+        </span>
+      </div>
+    </section>
+
+    <!-- 3. Игровое поле: 3 крупных квадратных слота по центру -->
+    <section aria-label="Слоты" class="w-full grid grid-cols-3 gap-2.5 sm:gap-3">
+      <div id="reelBox0" class="aspect-square bg-zinc-900 border-2 border-zinc-800 rounded-2xl sm:rounded-3xl flex items-center justify-center shadow-inner transition-colors duration-200 overflow-hidden">
+        <span id="reelSymbol0" class="text-5xl sm:text-6xl leading-none select-none transition-transform duration-100">🍒</span>
+      </div>
+
+      <div id="reelBox1" class="aspect-square bg-zinc-900 border-2 border-zinc-800 rounded-2xl sm:rounded-3xl flex items-center justify-center shadow-inner transition-colors duration-200 overflow-hidden">
+        <span id="reelSymbol1" class="text-5xl sm:text-6xl leading-none select-none transition-transform duration-100">🍋</span>
+      </div>
+
+      <div id="reelBox2" class="aspect-square bg-zinc-900 border-2 border-zinc-800 rounded-2xl sm:rounded-3xl flex items-center justify-center shadow-inner transition-colors duration-200 overflow-hidden">
+        <span id="reelSymbol2" class="text-5xl sm:text-6xl leading-none select-none transition-transform duration-100">🍇</span>
+      </div>
+    </section>
+
+    <!-- 4. Большая контрастная кнопка запуска ровно на 20px ниже слотов -->
+    <button
+      id="spinBtn"
+      type="button"
+      style="margin-top: 20px;"
+      class="w-full py-3.5 sm:py-4 px-6 bg-white hover:bg-zinc-200 active:scale-[0.98] disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed disabled:active:scale-100 text-zinc-950 font-extrabold text-base sm:text-lg rounded-2xl shadow-lg shadow-white/5 transition-all duration-150 cursor-pointer"
+    >
+      Крутить за $10
+    </button>
+
+    <!-- 5. Кнопка "Додеп" с 60-секундным кулдауном и выпадающей панелью выбора -->
+    <div class="w-full mt-2 relative">
+      <button
+        id="dodepBtn"
+        type="button"
+        class="w-full py-2.5 px-4 bg-zinc-900 hover:bg-zinc-800/90 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 border border-zinc-800 text-zinc-300 font-semibold text-xs sm:text-sm rounded-xl transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer"
+      >
+        <span>💸 Додеп</span>
+      </button>
+
+      <!-- Панель выбора источника додепа (всплывает поверх, не сдвигая экран) -->
+      <div id="dodepMenu" class="hidden absolute bottom-full left-0 right-0 mb-2 z-30 bg-zinc-900 border border-zinc-700 rounded-2xl p-3 space-y-2 shadow-2xl">
+        <div class="flex items-center justify-between px-1">
+          <span class="text-xs font-medium text-zinc-400">Источник средств (кулдаун 60с)</span>
+          <button id="closeDodepMenuBtn" type="button" class="text-xs text-zinc-400 hover:text-white px-2 py-0.5 cursor-pointer">✕</button>
+        </div>
+
+        <button
+          type="button"
+          data-add="50"
+          data-msg="Хата продана"
+          class="dodep-choice w-full p-2.5 bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 rounded-xl flex items-center justify-between transition-colors cursor-pointer text-left"
+        >
+          <span class="text-xs sm:text-sm font-medium text-zinc-200">🏠 Продать хату (+$50)</span>
+          <span class="text-xs font-bold text-emerald-400">+$50</span>
+        </button>
+
+        <button
+          type="button"
+          data-add="20"
+          data-msg="Занял у кореша"
+          class="dodep-choice w-full p-2.5 bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 rounded-xl flex items-center justify-between transition-colors cursor-pointer text-left"
+        >
+          <span class="text-xs sm:text-sm font-medium text-zinc-200">🤝 Занять (+$20)</span>
+          <span class="text-xs font-bold text-emerald-400">+$20</span>
+        </button>
+
+        <button
+    <!-- 5. Кнопка "Додеп" с 60-секундным кулдауном (открывает рулетку кейсов) -->
+    <div class="w-full mt-2 relative">
+      <button
+        id="dodepBtn"
+        type="button"
+        class="w-full py-2.5 px-4 bg-zinc-900 hover:bg-zinc-800/90 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 border border-zinc-800 text-zinc-300 font-semibold text-xs sm:text-sm rounded-xl transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer"
+      >
+        <span>🎰 Додеп (Рулетка)</span>
+      </button>
+    </div>
+
+    <!-- 6. Статусная строка для вывода результата ("Победа! +$WIN" или уведомления) -->
+    <div class="min-h-[28px] mt-2 flex items-center justify-center text-center">
+      <p id="statusBanner" class="hidden text-base sm:text-lg font-extrabold tracking-tight text-emerald-400"></p>
+    </div>
+  </main>
+
+  <!-- Багрово-чёрная виньетка саспенса по краям экрана -->
+  <div
+    id="suspenseVignette"
+    aria-hidden="true"
+    style="position: fixed; inset: 0; z-index: 9990; pointer-events: none;"
+    class="hidden"
+  ></div>
+
+  <!-- Полноэкранный слой для комбо-вспышек (х1, х2!, х3!!!!) поверх всего -->
+  <div
+    id="comboSplashLayer"
+    aria-hidden="true"
+    style="position: fixed; inset: 0; z-index: 9999; pointer-events: none;"
+    class="flex items-center justify-center overflow-hidden"
+  >
+    <span id="comboSplashText" class="hidden font-black italic tracking-tighter select-none text-center"></span>
+  </div>
+
+  <!-- Модальное окно: Рулетка "Додеп" -->
+  <div
+    id="dodepModal"
+    role="dialog"
+    aria-modal="true"
+    style="z-index: 9997;"
+    class="hidden fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4"
+  >
+    <div class="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-3xl p-4 sm:p-5 shadow-2xl">
+      <div class="flex items-center justify-between mb-2">
+        <div>
+          <h2 class="text-lg sm:text-xl font-extrabold text-white tracking-tight">🎰 Рулетка Додепа</h2>
+          <p class="text-[11px] sm:text-xs text-zinc-400">Крути ленту, чтобы выбить пополнение (кулдаун 60с)</p>
+        </div>
+        <button
+          id="closeDodepModalBtn"
+          type="button"
+          aria-label="Закрыть рулетку"
+          class="w-8 h-8 rounded-xl bg-zinc-950 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white flex items-center justify-center text-sm cursor-pointer transition-colors"
+        >
+          ✕
+        </button>
+      </div>
+
+      <!-- Контейнер горизонтальной ленты кейсов с центральным указателем -->
+      <div id="rouletteViewport" class="relative w-full h-32 bg-zinc-950 border-2 border-zinc-800 rounded-2xl overflow-hidden my-3 shadow-inner">
+        <!-- Верхний и нижний треугольные маркеры центра -->
+        <div style="z-index: 20; pointer-events: none;" class="absolute top-0 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[10px] border-t-amber-400"></div>
+        <div style="z-index: 20; pointer-events: none;" class="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-b-[10px] border-b-amber-400"></div>
+        <!-- Вертикальная центральная линия прицела -->
+        <div style="z-index: 15; pointer-events: none;" class="absolute inset-y-0 left-1/2 -translate-x-1/2 w-[2px] bg-amber-400/85 shadow-[0_0_12px_rgba(251,191,36,0.9)]"></div>
+        <!-- Боковые градиенты затемнения краёв -->
+        <div style="z-index: 10; pointer-events: none;" class="absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-zinc-950 to-transparent"></div>
+        <div style="z-index: 10; pointer-events: none;" class="absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-zinc-950 to-transparent"></div>
+
+        <!-- Движущаяся дорожка карточек -->
+        <div id="rouletteTrack" class="flex items-center h-full will-change-transform" style="transform: translate3d(0px, 0, 0);">
+          <!-- Карточки генерируются динамически -->
+        </div>
+      </div>
+
+      <!-- Блок выпавшего результата -->
+      <div id="rouletteResultBox" class="hidden mb-3 p-3 rounded-2xl bg-zinc-950 border border-zinc-800 text-center">
+        <p class="text-[11px] uppercase tracking-wider font-semibold text-zinc-500">Выпало пополнение</p>
+        <p id="rouletteResultTitle" class="text-sm sm:text-base font-extrabold text-white mt-0.5"></p>
+        <p id="rouletteResultAmount" class="text-lg sm:text-xl font-black text-emerald-400 mt-0.5">+$0</p>
+      </div>
+
+      <!-- Компактная легенда шансов -->
+      <div id="rouletteOddsLegend" class="grid grid-cols-3 gap-1 mb-3 text-[10px] text-zinc-400">
+        <!-- Заполняется через JS -->
+      </div>
+
+      <!-- Кнопка запуска / забора награды -->
+      <button
+        id="spinRouletteBtn"
+        type="button"
+        class="w-full py-3.5 px-5 bg-amber-400 hover:bg-amber-300 active:scale-[0.98] disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed text-zinc-950 font-extrabold text-sm sm:text-base rounded-2xl shadow-lg transition-all duration-150 cursor-pointer"
+      >
+        Крутить рулетку
+      </button>
+    </div>
+  </div>
+
+  <!-- Модальное окно: Капча на трезвость -->
+  <div
+    id="sobrietyOverlay"
+    role="dialog"
+    aria-modal="true"
+    style="z-index: 9998;"
+    class="hidden fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4"
+  >
+    <div id="sobrietyBox" class="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-3xl p-5 shadow-2xl max-h-[90dvh] overflow-y-auto">
+      <div class="flex items-center justify-between gap-2 mb-2.5">
+        <span id="quizTopicBadge" class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wider bg-sky-500/15 text-sky-300 border border-sky-500/30">
+          ТОЭ
+        </span>
+        <span class="text-[11px] font-medium text-zinc-500">Контроль трезвости</span>
+      </div>
+
+      <h2 class="text-xl font-extrabold text-white tracking-tight">
+        Проверка на трезвость
+      </h2>
+      <p class="text-xs text-zinc-400 mt-1 mb-3">
+        Ответь правильно, чтобы доказать адекватность и продолжить игру
+      </p>
+
+      <div class="bg-zinc-950 border border-zinc-800 rounded-2xl p-3.5 mb-3">
+        <p id="quizQuestionText" class="text-sm font-medium text-zinc-100 leading-relaxed"></p>
+      </div>
+
+      <div id="quizOptionsList" class="space-y-2">
+        <!-- 4 варианта ответа генерируются через JS -->
+      </div>
+
+      <div class="min-h-[24px] mt-2.5 flex items-center justify-center text-center">
+        <p id="quizFeedbackText" class="text-xs font-semibold hidden"></p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Набор из 10 эмодзи согласно ТЗ
+      const EMOJI_SET = ['🍒', '🍋', '🍇', '🍉', '🔔', '💎', '7️⃣', '🍀', '🔥', '💀'];
+
+      // Конфигурация секторов рулетки "Додеп" (сумма шансов ровно 100%)
+      const DODEP_ITEMS = [
+        { title: 'Продать хату', chance: 1, reward: 5000, icon: '🏠', rarity: 'gold' },
+        { title: 'Победа в лотерее', chance: 1, reward: 2500, icon: '🎟️', rarity: 'gold' },
+        { title: 'Хорошее наследство', chance: 5, reward: 600, icon: '📜', rarity: 'purple' },
+        { title: 'З/П с премией', chance: 7, reward: 250, icon: '💼', rarity: 'blue' },
+        { title: 'Сдал в ломбард бабкины зубы', chance: 10, reward: 120, icon: '🦷', rarity: 'blue' },
+        { title: '13-ая З/П', chance: 15, reward: 75, icon: '📅', rarity: 'green' },
+        { title: 'З/П', chance: 20, reward: 40, icon: '💵', rarity: 'common' },
+        { title: 'Саня вернул долг', chance: 16, reward: 20, icon: '🤝', rarity: 'common' },
+        { title: 'Мелочь в зимней куртке', chance: 25, reward: 10, icon: '🧥', rarity: 'common' }
+      ];
+
+      // База из 15 вопросов по 3 темам (по 5 на каждую)
+      const QUIZ_BANK = [
+        // --- ТОЭ (5 вопросов) ---
+        {
+          topic: 'ТОЭ',
+          question: 'Чему равна алгебраическая сумма токов в любом узле электрической цепи по первому закону Кирхгофа?',
+          options: ['Нулю', 'Сумме ЭДС в контуре', 'Напряжению источника питания', 'Половине входного тока'],
+          correct: 0
+        },
+        {
+          topic: 'ТОЭ',
+          question: 'Какое условие выполняется при резонансе напряжений в последовательном RLC-контуре?',
+          options: [
+            'Индуктивное сопротивление равно емкостному (XL = XC)',
+            'Активное сопротивление равно нулю (R = 0)',
+            'Ток в контуре падает до нуля',
+            'Сдвиг фаз между током и напряжением равен 90°'
+          ],
+          correct: 0
+        },
+        {
+          topic: 'ТОЭ',
+          question: 'Каков сдвиг фаз между напряжением и током на идеальной катушке индуктивности?',
+          options: [
+            'Напряжение опережает ток на 90°',
+            'Ток опережает напряжение на 90°',
+            'Напряжение и ток совпадают по фазе (0°)',
+            'Напряжение отстает от тока на 180°'
+          ],
+          correct: 0
+        },
+        {
+          topic: 'ТОЭ',
+          question: 'По какой формуле вычисляется реактивное сопротивление идеального конденсатора (XC)?',
+          options: ['XC = 1 / (ωC)', 'XC = ωC', 'XC = ωL', 'XC = R / (ωC)'],
+          correct: 0
+        },
+        {
+          topic: 'ТОЭ',
+          question: 'Что учитывается в знаменателе формулы закона Ома для полной замкнутой цепи I = E / (R + r)?',
+          options: [
+            'Сумма внешнего сопротивления нагрузки R и внутреннего сопротивления источника r',
+            'Только сопротивление внешней нагрузки R',
+            'Разность внешнего и внутреннего сопротивлений',
+            'Произведение ЭДС и внутреннего сопротивления'
+          ],
+          correct: 0
+        },
+
+        // --- Метрология (5 вопросов) ---
+        {
+          topic: 'Метрология',
+          question: 'Чем систематическая погрешность измерений отличается от случайной?',
+          options: [
+            'Остается постоянной или закономерно меняется при повторных замерах',
+            'Возникает только из-за поломки дисплея прибора',
+            'Всегда равна нулю в цифровых мультиметрах',
+            'Непредсказуемо меняет знак и величину при каждом измерении'
+          ],
+          correct: 0
+        },
+        {
+          topic: 'Метрология',
+          question: 'Как рассчитывается приведенная погрешность средства измерений (γ)?',
+          options: [
+            'Отношение абсолютной погрешности к нормирующему значению (в %)',
+            'Отношение абсолютной погрешности к истинному значению',
+            'Разность между показанием прибора и ценой деления',
+            'Произведение относительной погрешности на время замера'
+          ],
+          correct: 0
+        },
+        {
+          topic: 'Метрология',
+          question: 'В чем главное отличие поверки средства измерений от калибровки?',
+          options: [
+            'Поверка обязательна в сфере госрегулирования и подтверждает пригодность, калибровка — добровольна',
+            'Калибровку делают только для линеек, а поверку — для вольтметров',
+            'Поверка — это ремонт прибора, а калибровка — его упаковка',
+            'Это полные синонимы без юридической разницы'
+          ],
+          correct: 0
+        },
+        {
+          topic: 'Метрология',
+          question: 'Как определяется абсолютная погрешность измерения (Δ)?',
+          options: [
+            'Разность между измеренным значением и действительным (истинным) значением',
+            'Отношение действительного значения к показанию прибора',
+            'Половина цены наименьшего деления шкалы',
+            'Квадратный корень из суммы всех измерений'
+          ],
+          correct: 0
+        },
+        {
+          topic: 'Метрология',
+          question: 'Что означает класс точности прибора (например, 0.5 или 1.5), указанный числом без значков?',
+          options: [
+            'Предел допускаемой основной приведенной погрешности в процентах',
+            'Количество измерительных диапазонов на шкале',
+            'Максимальное рабочее напряжение в киловольтах',
+            'Потребляемую прибором мощность в ваттах'
+          ],
+          correct: 0
+        },
+
+        // --- Игры (5 вопросов) ---
+        {
+          topic: 'Игры',
+          question: 'На что напрямую влияет высокий тикрейт сервера (например, 128 Гц вместо 64 Гц) в CS?',
+          options: [
+            'На частоту обновления состояния мира сервером в секунду и точность регистрации попаданий',
+            'На максимальное разрешение текстур и качество теней',
+            'На скорость загрузки карты с SSD-диска',
+            'На объем видеопамяти, занимаемой моделями игроков'
+          ],
+          correct: 0
+        },
+        {
+          topic: 'Игры',
+          question: 'Какой эффект оказывает ультимейт Chronosphere у Faceless Void в Dota 2?',
+          options: [
+            'Останавливает во времени всех существ и постройки в куполе, кроме самого Void и его юнитов',
+            'Наносит периодический урон, но не мешает врагам двигаться',
+            'Делает всех союзников внутри сферы неуязвимыми к магии',
+            'Мгновенно телепортирует всех героев в куполе на базу'
+          ],
+          correct: 0
+        },
+        {
+          topic: 'Игры',
+          question: 'Какие блоки нужны для призыва Иссушителя (Визера) в Minecraft?',
+          options: [
+            '4 блока песка (или почвы) душ буквой «Т» и 3 черепа скелета-иссушителя сверху',
+            '4 блока обсидиана и 1 звезда Незера в центре',
+            '4 железных блока буквой «Т» и 1 вырезанная тыква сверху',
+            '3 блока незерита и 4 черепа обычного скелета'
+          ],
+          correct: 0
+        },
+        {
+          topic: 'Игры',
+          question: 'Кем является загадочный G-Man в серии игр Half-Life?',
+          options: [
+            'Межпространственным «нанимателем» с дипломатом, контролирующим судьбу Гордона Фримена',
+            'Главным инженером «Черной Мезы», создавшим костюм HEV',
+            'Лидером сопротивления в Сити-17 и отцом Аликс Вэнс',
+            'Искусственным интеллектом, управляющим цитаделью Альянса'
+          ],
+          correct: 0
+        },
+        {
+          topic: 'Игры',
+          question: 'За счет чего кумулятивные снаряды (HEAT) в танковых симуляторах пробивают броню на любой дистанции?',
+          options: [
+            'За счет сфокусированной высокоскоростной металлической струи при подрыве заряда, не зависящей от скорости полета снаряда',
+            'За счет огромной кинетической энергии тяжелого уранового сердечника',
+            'За счет расплавления всей башни танка термитной смесью',
+            'За счет рикошета от земли прямо в днище корпуса'
+          ],
+          correct: 0
+        }
+      ];
+
+      // Безопасное получение DOM-элементов
+      const appContainer = document.getElementById('appContainer');
+      const balanceValueEl = document.getElementById('balanceValue');
+      const balanceDeltaEl = document.getElementById('balanceDelta');
+      const soundToggleBtn = document.getElementById('soundToggleBtn');
+      const betPills = document.querySelectorAll('.bet-pill');
+      const customBetInput = document.getElementById('customBetInput');
+
+      const nSlider = document.getElementById('nSlider');
+      const nDisplayEl = document.getElementById('nDisplay');
+      const payoutBadgeEl = document.getElementById('payoutBadge');
+      const activeEmojisRowEl = document.getElementById('activeEmojisRow');
+      const chanceBadgeEl = document.getElementById('chanceBadge');
+
+      const reelBoxes = [
+        document.getElementById('reelBox0'),
+        document.getElementById('reelBox1'),
+        document.getElementById('reelBox2')
+      ];
+
+      const reelSymbols = [
+        document.getElementById('reelSymbol0'),
+        document.getElementById('reelSymbol1'),
+        document.getElementById('reelSymbol2')
+      ];
+
+      const spinBtn = document.getElementById('spinBtn');
+      const dodepBtn = document.getElementById('dodepBtn');
+      const statusBannerEl = document.getElementById('statusBanner');
+
+      // Элементы модального окна рулетки Додепа
+      const dodepModal = document.getElementById('dodepModal');
+      const closeDodepModalBtn = document.getElementById('closeDodepModalBtn');
+      const rouletteViewport = document.getElementById('rouletteViewport');
+      const rouletteTrack = document.getElementById('rouletteTrack');
+      const rouletteResultBox = document.getElementById('rouletteResultBox');
+      const rouletteResultTitle = document.getElementById('rouletteResultTitle');
+      const rouletteResultAmount = document.getElementById('rouletteResultAmount');
+      const rouletteOddsLegend = document.getElementById('rouletteOddsLegend');
+      const spinRouletteBtn = document.getElementById('spinRouletteBtn');
+
+      const suspenseVignetteEl = document.getElementById('suspenseVignette');
+      const comboSplashTextEl = document.getElementById('comboSplashText');
+
+      const sobrietyOverlay = document.getElementById('sobrietyOverlay');
+      const sobrietyBox = document.getElementById('sobrietyBox');
+      const quizTopicBadge = document.getElementById('quizTopicBadge');
+      const quizQuestionText = document.getElementById('quizQuestionText');
+      const quizOptionsList = document.getElementById('quizOptionsList');
+      const quizFeedbackText = document.getElementById('quizFeedbackText');
+
+      // Проверка критических DOM-элементов
+      if (!spinBtn || !nSlider || !balanceValueEl || reelBoxes.some(b => !b) || reelSymbols.some(s => !s)) {
+        console.error('Ошибка инициализации: не найдены базовые DOM-элементы.');
+        return;
+      }
+
+      // Состояние игры
+      let balance = 100;
+      let betMode = 10; // 5, 10, 25, 'MAX' или 'CUSTOM'
+      let customBetValue = null;
+      let currentN = parseInt(nSlider.value, 10) || 5;
+      let isSpinning = false;
+      let isCaptchaActive = false;
+      let isRouletteSpinning = false;
+      let rouletteAutoCloseTimer = null;
+
+      let spinsLeftBeforeCaptcha = randomInt(5, 10);
+      let lastQuizIdx = -1;
+      let isQuizValidating = false;
+
+      let dodepReadyTimestamp = 0;
+      let dodepIntervalId = null;
+      let deltaHideTimer = null;
+      let comboHideTimer = null;
+
+      /**
+       * Процедурный звуковой движок (полностью защищён try/catch)
+       */
+      const SoundFX = (() => {
+        let ctx = null;
+        let enabled = true;
+        let droneOsc = null;
+        let droneGain = null;
+        let heartbeatTimer = null;
+
+        function ensureContext() {
+          if (!enabled) return null;
+          try {
+            if (!ctx) {
+              const AudioCtx = window.AudioContext || window.webkitAudioContext;
+              if (AudioCtx) ctx = new AudioCtx();
+            }
+            if (ctx && ctx.state === 'suspended') {
+              ctx.resume().catch(() => {});
+            }
+            return ctx;
+          } catch (e) {
+            return null;
+          }
+        }
+
+        function playTick(pitch = 420) {
+          try {
+            const c = ensureContext();
+            if (!c) return;
+            const now = c.currentTime;
+            const osc = c.createOscillator();
+            const gain = c.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(pitch, now);
+            osc.frequency.exponentialRampToValueAtTime(95, now + 0.025);
+
+            gain.gain.setValueAtTime(0.05, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.028);
+
+            osc.connect(gain);
+            gain.connect(c.destination);
+            osc.start(now);
+            osc.stop(now + 0.03);
+          } catch (e) {}
+        }
+
+        function playReelStop(stage) {
+          try {
+            const c = ensureContext();
+            if (!c) return;
+            const now = c.currentTime;
+            const osc = c.createOscillator();
+            const gain = c.createGain();
+            osc.type = 'sine';
+            const baseFreq = stage === 1 ? 330 : stage === 2 ? 440 : 250;
+            osc.frequency.setValueAtTime(baseFreq, now);
+            osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.4, now + 0.14);
+
+            gain.gain.setValueAtTime(0.15, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+
+            osc.connect(gain);
+            gain.connect(c.destination);
+            osc.start(now);
+            osc.stop(now + 0.17);
+          } catch (e) {}
+        }
+
+        function playHeartbeatPulse(intensity = 1) {
+          try {
+            const c = ensureContext();
+            if (!c) return;
+            const now = c.currentTime;
+            [0, 0.14].forEach((offset, idx) => {
+              const osc = c.createOscillator();
+              const gain = c.createGain();
+              osc.type = 'sine';
+              const startFreq = idx === 0 ? 78 : 62;
+              osc.frequency.setValueAtTime(startFreq, now + offset);
+              osc.frequency.exponentialRampToValueAtTime(28, now + offset + 0.12);
+
+              const vol = (idx === 0 ? 0.22 : 0.15) * intensity;
+              gain.gain.setValueAtTime(vol, now + offset);
+              gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.13);
+
+              osc.connect(gain);
+              gain.connect(c.destination);
+              osc.start(now + offset);
+              osc.stop(now + offset + 0.14);
+            });
+          } catch (e) {}
+        }
+
+        function startSuspense() {
+          stopSuspense();
+          try {
+            const c = ensureContext();
+            if (!c) return;
+            const now = c.currentTime;
+
+            droneOsc = c.createOscillator();
+            droneGain = c.createGain();
+            droneOsc.type = 'sawtooth';
+
+            const filter = c.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(110, now);
+            filter.frequency.exponentialRampToValueAtTime(420, now + 3.8);
+
+            droneOsc.frequency.setValueAtTime(48, now);
+            droneOsc.frequency.linearRampToValueAtTime(92, now + 3.8);
+
+            droneGain.gain.setValueAtTime(0.01, now);
+            droneGain.gain.linearRampToValueAtTime(0.14, now + 3.6);
+
+            droneOsc.connect(filter);
+            filter.connect(droneGain);
+            droneGain.connect(c.destination);
+            droneOsc.start(now);
+
+            let beatDelay = 520;
+            const beatLoop = () => {
+              if (!droneOsc) return;
+              playHeartbeatPulse(1.1);
+              beatDelay = Math.max(210, beatDelay * 0.86);
+              heartbeatTimer = setTimeout(beatLoop, beatDelay);
+            };
+            beatLoop();
+          } catch (e) {}
+        }
+
+        function stopSuspense() {
+          try {
+            if (heartbeatTimer) {
+              clearTimeout(heartbeatTimer);
+              heartbeatTimer = null;
+            }
+            if (droneOsc) {
+              droneOsc.stop();
+              droneOsc.disconnect();
+              droneOsc = null;
+            }
+            if (droneGain) {
+              droneGain.disconnect();
+              droneGain = null;
+            }
+          } catch (e) {
+            droneOsc = null;
+            droneGain = null;
+          }
+        }
+
+        function playJackpotChord() {
+          stopSuspense();
+          try {
+            const c = ensureContext();
+            if (!c) return;
+            const now = c.currentTime;
+            const notes = [261.63, 329.63, 392.0, 523.25, 659.25];
+            notes.forEach((freq, i) => {
+              const osc = c.createOscillator();
+              const gain = c.createGain();
+              osc.type = i % 2 === 0 ? 'triangle' : 'sawtooth';
+              osc.frequency.setValueAtTime(freq, now + i * 0.035);
+              gain.gain.setValueAtTime(0.001, now + i * 0.035);
+              gain.gain.linearRampToValueAtTime(0.11, now + i * 0.035 + 0.04);
+              gain.gain.exponentialRampToValueAtTime(0.001, now + 1.15);
+              osc.connect(gain);
+              gain.connect(c.destination);
+              osc.start(now + i * 0.035);
+              osc.stop(now + 1.2);
+            });
+          } catch (e) {}
+        }
+
+        function playMissThud() {
+          stopSuspense();
+          try {
+            const c = ensureContext();
+            if (!c) return;
+            const now = c.currentTime;
+            const osc = c.createOscillator();
+            const gain = c.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(145, now);
+            osc.frequency.exponentialRampToValueAtTime(48, now + 0.32);
+            gain.gain.setValueAtTime(0.22, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.34);
+            osc.connect(gain);
+            gain.connect(c.destination);
+            osc.start(now);
+            osc.stop(now + 0.35);
+          } catch (e) {}
+        }
+
+        function toggle() {
+          enabled = !enabled;
+          if (!enabled) stopSuspense();
+          else ensureContext();
+          return enabled;
+        }
+
+        return {
+          ensureContext,
+          playTick,
+          playReelStop,
+          startSuspense,
+          stopSuspense,
+          playJackpotChord,
+          playMissThud,
+          toggle
+        };
+      })();
+
+      // --- Вспомогательные функции ---
+
+      function randomInt(min, max) {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+      }
+
+      function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+      }
+
+      function getPool() {
+        return EMOJI_SET.slice(0, currentN);
+      }
+
+      function pickRandomSymbol(pool) {
+        return pool[Math.floor(Math.random() * pool.length)];
+      }
+
+      function getMultiplier() {
+        return currentN * currentN;
+      }
+
+      function getBetAmount() {
+        if (betMode === 'MAX') {
+          return balance > 0 ? balance : 5;
+        }
+        if (betMode === 'CUSTOM') {
+          return customBetValue !== null ? customBetValue : 0;
+        }
+        return betMode;
+      }
+
+      function flashDelta(amount) {
+        if (!balanceDeltaEl) return;
+        if (deltaHideTimer) clearTimeout(deltaHideTimer);
+
+        if (amount >= 0) {
+          balanceDeltaEl.textContent = `+$${amount}`;
+          balanceDeltaEl.className = 'text-xs font-bold text-emerald-400 transition-opacity duration-300 opacity-100';
+        } else {
+          balanceDeltaEl.textContent = `-$${Math.abs(amount)}`;
+          balanceDeltaEl.className = 'text-xs font-bold text-rose-400 transition-opacity duration-300 opacity-100';
+        }
+
+        deltaHideTimer = setTimeout(() => {
+          balanceDeltaEl.classList.remove('opacity-100');
+          balanceDeltaEl.classList.add('opacity-0');
+        }, 1400);
+      }
+
+      /**
+       * Обновляет весь UI: баланс, кнопки ставок, свою ставку, шансы, кнопку крутки и состояние Додепа
+       */
+      function updateUI() {
+        const bet = getBetAmount();
+        const mult = getMultiplier();
+        const chancePct = Number(((1 / mult) * 100).toFixed(2));
+        const isCustomMode = betMode === 'CUSTOM';
+        const isCustomInvalid = isCustomMode && (!Number.isInteger(bet) || bet < 1 || bet > balance);
+
+        balanceValueEl.textContent = `$${balance}`;
+        nDisplayEl.textContent = String(currentN);
+
+        const displayBetForWin = bet > 0 ? bet : 0;
+        payoutBadgeEl.textContent = `x${mult} ($${displayBetForWin * mult})`;
+        chanceBadgeEl.textContent = `Шанс: ${chancePct}% (x${mult})`;
+
+        // Подсветка активной кнопки-таблетки ставки
+        betPills.forEach(pill => {
+          const isCurrent =
+            (betMode === 'MAX' && pill.dataset.bet === 'MAX') ||
+            (typeof betMode === 'number' && parseInt(pill.dataset.bet, 10) === betMode);
+
+          pill.disabled = isSpinning || isCaptchaActive || isRouletteSpinning;
+          if (isCurrent) {
+            pill.className = 'bet-pill px-1.5 sm:px-2 py-1.5 rounded-lg text-[11px] sm:text-xs font-bold bg-zinc-700 text-white transition-colors cursor-pointer';
+          } else {
+            pill.className = 'bet-pill px-1.5 sm:px-2 py-1.5 rounded-lg text-[11px] sm:text-xs font-bold text-zinc-400 hover:text-white transition-colors cursor-pointer';
+          }
+        });
+
+        // Стилизация инпута произвольной ставки
+        if (customBetInput) {
+          customBetInput.disabled = isSpinning || isCaptchaActive || isRouletteSpinning;
+          if (isCustomMode) {
+            if (bet > balance || (customBetValue !== null && bet < 1)) {
+              customBetInput.className =
+                'w-12 sm:w-14 px-1.5 py-1 rounded-lg bg-rose-950/60 border border-rose-500 focus:border-rose-400 focus:outline-none text-[11px] sm:text-xs font-bold text-rose-200 placeholder-rose-400 text-center transition-colors';
+            } else {
+              customBetInput.className =
+                'w-12 sm:w-14 px-1.5 py-1 rounded-lg bg-zinc-800 border border-emerald-500/70 focus:border-emerald-400 focus:outline-none text-[11px] sm:text-xs font-bold text-white placeholder-zinc-400 text-center transition-colors';
+            }
+          } else {
+            customBetInput.className =
+              'w-12 sm:w-14 px-1.5 py-1 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-zinc-500 focus:outline-none text-[11px] sm:text-xs font-bold text-white placeholder-zinc-500 text-center transition-colors';
+          }
+        }
+
+        nSlider.disabled = isSpinning || isCaptchaActive || isRouletteSpinning;
+
+        // Обновление кнопки крутки
+        if (isSpinning) {
+          spinBtn.disabled = true;
+        } else if (isCaptchaActive) {
+          spinBtn.disabled = true;
+          spinBtn.textContent = 'Пройдите проверку';
+        } else if (isCustomMode && (customBetValue === null || bet < 1)) {
+          spinBtn.disabled = true;
+          spinBtn.textContent = 'Введите ставку от $1';
+        } else if (bet > balance || balance <= 0) {
+          spinBtn.disabled = true;
+          spinBtn.textContent = balance <= 0 ? 'Нет средств ($0)' : 'Не хватает на ставку';
+        } else {
+          spinBtn.disabled = false;
+          spinBtn.textContent = `Крутить за $${bet}`;
+        }
+
+        // Подсветка кнопки Додеп при нехватке баланса
+        if (dodepBtn) {
+          const isCooldown = Date.now() < dodepReadyTimestamp;
+          if (!isCooldown && (bet > balance || balance <= 0 || isCustomInvalid)) {
+            dodepBtn.classList.add('dodep-attention');
+          } else {
+            dodepBtn.classList.remove('dodep-attention');
+          }
+        }
+      }
+
+      /**
+       * Обработчик изменения ползунка сложности N
+       */
+      function handleSliderChange() {
+        currentN = parseInt(nSlider.value, 10) || 5;
+        const pool = getPool();
+
+        if (activeEmojisRowEl) {
+          activeEmojisRowEl.innerHTML = '';
+          pool.forEach(emoji => {
+            const span = document.createElement('span');
+            span.textContent = emoji;
+            activeEmojisRowEl.appendChild(span);
+          });
+        }
+
+        // Если на барабанах остались символы за пределами нового пула, обновляем их
+        if (!isSpinning) {
+          reelSymbols.forEach((symEl, idx) => {
+            if (!pool.includes(symEl.textContent)) {
+              symEl.textContent = pool[idx % pool.length];
+            }
+          });
+        }
+
+        updateUI();
+      }
+
+      function resetVisualEffects() {
+        if (statusBannerEl) {
+          statusBannerEl.classList.add('hidden');
+          statusBannerEl.classList.remove('text-amber-300', 'text-zinc-400');
+          statusBannerEl.classList.add('text-emerald-400');
+        }
+        reelBoxes.forEach(box => box.classList.remove('slot-win', 'slot-suspense'));
+        if (comboSplashTextEl) comboSplashTextEl.classList.add('hidden');
+        if (suspenseVignetteEl) {
+          suspenseVignetteEl.classList.add('hidden');
+          suspenseVignetteEl.classList.remove('vignette-active');
+        }
+      }
+
+      function triggerShake() {
+        if (!appContainer) return;
+        appContainer.classList.remove('shake-screen');
+        void appContainer.offsetWidth;
+        appContainer.classList.add('shake-screen');
+      }
+
+      /**
+       * Показывает полноэкранные комбо-вспышки: х1, х2!, х3!!!!
+       */
+      function showComboSplash(stage) {
+        if (!comboSplashTextEl) return;
+        if (comboHideTimer) clearTimeout(comboHideTimer);
+
+        comboSplashTextEl.className = 'font-black italic tracking-tighter select-none text-center';
+        comboSplashTextEl.style.fontSize = '';
+        void comboSplashTextEl.offsetWidth;
+
+        if (stage === 1) {
+          comboSplashTextEl.textContent = 'х1';
+          comboSplashTextEl.style.fontSize = '90px';
+          comboSplashTextEl.classList.add(
+            'text-emerald-400',
+            'drop-shadow-[0_0_30px_rgba(52,211,153,0.9)]',
+            'combo-animate'
+          );
+          comboHideTimer = setTimeout(() => {
+            comboSplashTextEl.classList.add('hidden');
+          }, 850);
+        } else if (stage === 2) {
+          comboSplashTextEl.textContent = 'х2!';
+          comboSplashTextEl.style.fontSize = '110px';
+          comboSplashTextEl.classList.add(
+            'text-rose-500',
+            'drop-shadow-[0_0_38px_rgba(244,63,94,0.95)]',
+            'combo-animate'
+          );
+          triggerShake();
+          comboHideTimer = setTimeout(() => {
+            comboSplashTextEl.classList.add('hidden');
+          }, 850);
+        } else if (stage === 3) {
+          comboSplashTextEl.textContent = 'х3!!!!';
+          comboSplashTextEl.style.fontSize = '116px';
+          comboSplashTextEl.classList.add(
+            'bg-gradient-to-b',
+            'from-amber-200',
+            'via-amber-400',
+            'to-rose-500',
+            'bg-clip-text',
+            'text-transparent',
+            'drop-shadow-[0_0_52px_rgba(251,191,36,0.95)]',
+            'combo-jackpot-animate'
+          );
+          triggerShake();
+          comboHideTimer = setTimeout(() => {
+            comboSplashTextEl.classList.add('hidden');
+          }, 1100);
+        }
+      }
+
+      /**
+       * Управление вращением одного барабана с прогрессивным замедлением (эффект колеса фортуны)
+       * Эмодзи сменяются читаемо и ближе к остановке задерживаются на экране всё дольше
+       */
+      function startReelSpin(index, pool, initialDelayMs = 120) {
+        const symbolEl = reelSymbols[index];
+        const boxEl = reelBoxes[index];
+
+        let running = true;
+        let currentDelay = initialDelayMs;
+        let timerId = null;
+        let lastShown = symbolEl.textContent;
+
+        symbolEl.classList.remove('slot-landed');
+        symbolEl.classList.add('slot-spinning');
+
+        // Выбираем следующий символ так, чтобы он визуально отличался от предыдущего
+        const pickNextDistinct = () => {
+          if (pool.length <= 1) return pool[0];
+          let candidate;
+          let guard = 0;
+          do {
+            candidate = pickRandomSymbol(pool);
+            guard++;
+          } while (candidate === lastShown && guard < 8);
+          lastShown = candidate;
+          return candidate;
+        };
+
+        const step = () => {
+          if (!running) return;
+          symbolEl.textContent = pickNextDistinct();
+          // Высота щелчка плавно понижается по мере замедления барабана
+          const pitch = Math.max(170, 500 - currentDelay * 0.55);
+          SoundFX.playTick(pitch);
+          timerId = setTimeout(step, currentDelay);
+        };
+
+        // Запускаем первый шаг с небольшим сдвигом между барабанами, чтобы смена выглядела живой
+        timerId = setTimeout(step, index * 35);
+
+        return {
+          /**
+           * Непрерывное прогрессивное замедление (колесо фортуны):
+           * чем ближе к концу, тем дольше каждый эмодзи задерживается на экране
+           */
+          async decelerateToStop(totalDurationMs, startDelay, endDelay) {
+            const startTime = performance.now();
+            while (running) {
+              const elapsed = performance.now() - startTime;
+              const progress = Math.min(1, elapsed / totalDurationMs);
+              // Степенная кривая (progress^2.3) даёт ощутимую задержку последних 4-5 символов
+              const eased = Math.pow(progress, 2.3);
+              currentDelay = Math.round(startDelay + (endDelay - startDelay) * eased);
+
+              // Когда символы начинают задерживаться дольше 210 мс, убираем размытие для полной чёткости
+              if (currentDelay >= 210) {
+                symbolEl.classList.remove('slot-spinning');
+              }
+
+              if (progress >= 1) break;
+              await sleep(45);
+            }
+            // Даём последнему предфинальному эмодзи честно додержаться свой увеличенный интервал
+            await sleep(Math.min(endDelay * 0.85, 520));
+          },
+          activateSuspense() {
+            boxEl.classList.add('slot-suspense');
+            currentDelay = 125;
+            symbolEl.classList.add('slot-spinning');
+          },
+          stop() {
+            running = false;
+            if (timerId) clearTimeout(timerId);
+
+            const resultSymbol = pickRandomSymbol(pool);
+            symbolEl.textContent = resultSymbol;
+
+            boxEl.classList.remove('slot-suspense');
+            symbolEl.classList.remove('slot-spinning');
+            void symbolEl.offsetWidth;
+            symbolEl.classList.add('slot-landed');
+
+            return resultSymbol;
+          }
+        };
+      }
+
+      /**
+       * Главная функция вращения слотов (строго защищена try / finally)
+       */
+      async function spin() {
+        const bet = getBetAmount();
+        if (isSpinning || isCaptchaActive || isRouletteSpinning || !Number.isInteger(bet) || bet < 1 || balance < bet || balance <= 0) {
+          return;
+        }
+
+        SoundFX.ensureContext();
+        isSpinning = true;
+
+        try {
+          // Списываем ставку
+          balance -= bet;
+          flashDelta(-bet);
+          updateUI();
+
+          if (dodepModal) dodepModal.classList.add('hidden');
+          spinBtn.textContent = 'Крутим...';
+          resetVisualEffects();
+
+          const pool = getPool();
+          // Начальный интервал 115–125 мс, чтобы глаз успевал различать каждый символ
+          const r0 = startReelSpin(0, pool, 115);
+          const r1 = startReelSpin(1, pool, 120);
+          const r2 = startReelSpin(2, pool, 125);
+
+          // 1) 1-й слот: ~0.9с бодрого хода + ~1.5с тягучего торможения -> остановка на ~2.4 сек («х1»)
+          await sleep(900);
+          await r0.decelerateToStop(1250, 115, 440);
+          const sym0 = r0.stop();
+          SoundFX.playReelStop(1);
+          showComboSplash(1);
+
+          // 2) 2-й слот: ещё ~2.0с с прогрессивным замедлением от 120 до 520 мс -> остановка на ~4.4 сек
+          await r1.decelerateToStop(1650, 125, 520);
+          const sym1 = r1.stop();
+
+          let sym2;
+          if (sym0 === sym1) {
+            // Совпали 1 и 2! Вспышка «х2!» + режим саспенса (без фальш-фриза, непрерывное тягучее торможение)
+            SoundFX.playReelStop(2);
+            showComboSplash(2);
+            spinBtn.textContent = 'ТЯНЕМ Х3...';
+
+            if (suspenseVignetteEl) {
+              suspenseVignetteEl.classList.remove('hidden');
+              suspenseVignetteEl.classList.add('vignette-active');
+            }
+            r2.activateSuspense();
+            SoundFX.startSuspense();
+
+            // 3-й слот плавно и тяжело замедляется до отметки ~7.8 сек (от 125 мс до 660 мс на символ)
+            await sleep(600);
+            await r2.decelerateToStop(2350, 130, 660);
+            sym2 = r2.stop();
+
+            if (suspenseVignetteEl) {
+              suspenseVignetteEl.classList.add('hidden');
+              suspenseVignetteEl.classList.remove('vignette-active');
+            }
+          } else {
+            // 1-й и 2-й разные: 3-й слот плавно тормозит от 130 до 500 мс и останавливается на ~5.6 сек
+            SoundFX.playReelStop(1);
+            await r2.decelerateToStop(950, 130, 500);
+            sym2 = r2.stop();
+          }
+
+          // Проверка результата
+          if (sym0 === sym1 && sym1 === sym2) {
+            SoundFX.playJackpotChord();
+            showComboSplash(3);
+
+            const winAmount = bet * getMultiplier();
+            balance += winAmount;
+            flashDelta(winAmount);
+
+            reelBoxes.forEach(box => box.classList.add('slot-win'));
+
+            if (statusBannerEl) {
+              statusBannerEl.textContent = `Победа! +$${winAmount}`;
+              statusBannerEl.classList.remove('hidden', 'text-amber-300', 'text-zinc-400');
+              statusBannerEl.classList.add('text-emerald-400');
+            }
+          } else if (sym0 === sym1) {
+            SoundFX.playMissThud();
+            if (statusBannerEl) {
+              statusBannerEl.textContent = 'Мимо... Почти дотянул!';
+              statusBannerEl.classList.remove('hidden', 'text-emerald-400', 'text-amber-300');
+              statusBannerEl.classList.add('text-zinc-400');
+            }
+          } else {
+            SoundFX.playReelStop(3);
+          }
+
+          // Проверяем таймер капчи на трезвость (раз в 5-10 вращений)
+          spinsLeftBeforeCaptcha -= 1;
+          if (spinsLeftBeforeCaptcha <= 0) {
+            openSobrietyModal();
+          }
+        } catch (err) {
+          console.error('Ошибка в цикле вращения:', err);
+          SoundFX.stopSuspense();
+          if (suspenseVignetteEl) {
+            suspenseVignetteEl.classList.add('hidden');
+            suspenseVignetteEl.classList.remove('vignette-active');
+          }
+        } finally {
+          isSpinning = false;
+          updateUI();
+        }
+      }
+
+      /**
+       * Запускает 60-секундный кулдаун для кнопки "Додеп"
+       */
+      function startDodepCooldown() {
+        if (!dodepBtn) return;
+        dodepReadyTimestamp = Date.now() + 60000;
+        dodepBtn.disabled = true;
+        dodepBtn.classList.remove('dodep-attention');
+
+        if (dodepIntervalId) clearInterval(dodepIntervalId);
+
+        const tick = () => {
+          const leftMs = dodepReadyTimestamp - Date.now();
+          if (leftMs <= 0) {
+            clearInterval(dodepIntervalId);
+            dodepIntervalId = null;
+            dodepBtn.disabled = false;
+            dodepBtn.innerHTML = '<span>🎰 Додеп (Рулетка)</span>';
+            updateUI();
+            return;
+          }
+          const secLeft = Math.ceil(leftMs / 1000);
+          dodepBtn.innerHTML = `<span>⏳ Додеп через ${secLeft}с</span>`;
+        };
+
+        tick();
+        dodepIntervalId = setInterval(tick, 250);
+      }
+
+      // --- Логика рулетки "Додеп" ---
+
+      function getRarityCardClasses(rarity) {
+        switch (rarity) {
+          case 'gold':
+            return 'bg-gradient-to-b from-amber-500/25 to-zinc-950 border-amber-400 text-amber-200 shadow-[inset_0_0_16px_rgba(251,191,36,0.28)]';
+          case 'purple':
+            return 'bg-gradient-to-b from-purple-500/25 to-zinc-950 border-purple-400 text-purple-200 shadow-[inset_0_0_14px_rgba(192,132,252,0.22)]';
+          case 'blue':
+            return 'bg-gradient-to-b from-sky-500/20 to-zinc-950 border-sky-400 text-sky-200 shadow-[inset_0_0_12px_rgba(56,189,248,0.18)]';
+          case 'green':
+            return 'bg-gradient-to-b from-emerald-500/20 to-zinc-950 border-emerald-400 text-emerald-200';
+          default:
+            return 'bg-zinc-900 border-zinc-700 text-zinc-200';
+        }
+      }
+
+      function pickWeightedDodep() {
+        const roll = Math.random() * 100;
+        let acc = 0;
+        for (const item of DODEP_ITEMS) {
+          acc += item.chance;
+          if (roll < acc) return item;
+        }
+        return DODEP_ITEMS[DODEP_ITEMS.length - 1];
+      }
+
+      function renderRouletteLegend() {
+        if (!rouletteOddsLegend) return;
+        rouletteOddsLegend.innerHTML = '';
+        DODEP_ITEMS.forEach(item => {
+          const badge = document.createElement('div');
+          const colorCls =
+            item.rarity === 'gold'
+              ? 'text-amber-300 border-amber-500/30 bg-amber-500/10'
+              : item.rarity === 'purple'
+              ? 'text-purple-300 border-purple-500/30 bg-purple-500/10'
+              : item.rarity === 'blue'
+              ? 'text-sky-300 border-sky-500/30 bg-sky-500/10'
+              : item.rarity === 'green'
+              ? 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10'
+              : 'text-zinc-400 border-zinc-800 bg-zinc-950';
+          badge.className = `px-1.5 py-1 rounded-lg border truncate flex items-center justify-between gap-1 ${colorCls}`;
+          badge.title = `${item.title} (${item.chance}%) — +$${item.reward}`;
+          badge.innerHTML = `<span class="truncate">${item.icon} +$${item.reward}</span><span class="font-bold shrink-0">${item.chance}%</span>`;
+          rouletteOddsLegend.appendChild(badge);
+        });
+      }
+
+      function createRouletteCardEl(item, cardWidth) {
+        const card = document.createElement('div');
+        card.style.width = `${cardWidth}px`;
+        card.style.minWidth = `${cardWidth}px`;
+        card.className = `h-24 mx-1 rounded-xl border-2 p-1.5 flex flex-col items-center justify-between text-center select-none transition-transform ${getRarityCardClasses(item.rarity)}`;
+        card.innerHTML = `
+          <span class="text-[10px] font-bold opacity-80">${item.chance}%</span>
+          <span class="text-2xl leading-none">${item.icon}</span>
+          <div class="w-full">
+            <p class="text-[10px] font-semibold leading-tight line-clamp-1">${item.title}</p>
+            <p class="text-xs font-black text-emerald-400">+$${item.reward}</p>
+          </div>
+        `;
+        return card;
+      }
+
+      function prepareRoulettePreviewTrack() {
+        if (!rouletteTrack) return;
+        rouletteTrack.innerHTML = '';
+        rouletteTrack.style.transform = 'translate3d(0px, 0, 0)';
+        const cardWidth = 108;
+        for (let i = 0; i < 12; i++) {
+          const item = DODEP_ITEMS[i % DODEP_ITEMS.length];
+          rouletteTrack.appendChild(createRouletteCardEl(item, cardWidth));
+        }
+      }
+
+      function openDodepModal() {
+        if (!dodepModal || isSpinning || isCaptchaActive || Date.now() < dodepReadyTimestamp) return;
+        if (rouletteAutoCloseTimer) {
+          clearTimeout(rouletteAutoCloseTimer);
+          rouletteAutoCloseTimer = null;
+        }
+        isRouletteSpinning = false;
+        if (rouletteResultBox) rouletteResultBox.classList.add('hidden');
+        if (closeDodepModalBtn) closeDodepModalBtn.disabled = false;
+        if (spinRouletteBtn) {
+          spinRouletteBtn.disabled = false;
+          spinRouletteBtn.textContent = 'Крутить рулетку';
+          spinRouletteBtn.onclick = runDodepRoulette;
+        }
+        renderRouletteLegend();
+        prepareRoulettePreviewTrack();
+        dodepModal.classList.remove('hidden');
+        updateUI();
+      }
+
+      function closeDodepModal() {
+        if (isRouletteSpinning || !dodepModal) return;
+        if (rouletteAutoCloseTimer) {
+          clearTimeout(rouletteAutoCloseTimer);
+          rouletteAutoCloseTimer = null;
+        }
+        dodepModal.classList.add('hidden');
+        updateUI();
+      }
+
+      /**
+       * Запуск горизонтальной рулетки Додепа с плавным замедлением и звуковыми щелчками
+       */
+      function runDodepRoulette() {
+        if (isRouletteSpinning || Date.now() < dodepReadyTimestamp || !rouletteTrack || !rouletteViewport) return;
+
+        SoundFX.ensureContext();
+        isRouletteSpinning = true;
+        if (spinRouletteBtn) {
+          spinRouletteBtn.disabled = true;
+          spinRouletteBtn.textContent = 'Крутится...';
+        }
+        if (closeDodepModalBtn) closeDodepModalBtn.disabled = true;
+        if (rouletteResultBox) rouletteResultBox.classList.add('hidden');
+        updateUI();
+
+        const winner = pickWeightedDodep();
+        const totalCards = 58;
+        const winnerIndex = 48;
+        const cardWidth = 108;
+        const cardGap = 8; // mx-1 -> 4px слева + 4px справа
+        const stepPx = cardWidth + cardGap;
+
+        rouletteTrack.innerHTML = '';
+        for (let i = 0; i < totalCards; i++) {
+          const item = i === winnerIndex ? winner : pickWeightedDodep();
+          const cardEl = createRouletteCardEl(item, cardWidth);
+          if (i === winnerIndex) cardEl.dataset.winnerCard = '1';
+          rouletteTrack.appendChild(cardEl);
+        }
+
+        const viewportWidth = rouletteViewport.clientWidth || 320;
+        const centerOffset = viewportWidth / 2;
+        // Случайное смещение внутри призовой карточки (-26px..+26px), чтобы остановка выглядела живой
+        const jitter = randomInt(-26, 26);
+        const winnerCenterPos = winnerIndex * stepPx + stepPx / 2;
+        const targetX = Math.max(0, winnerCenterPos - centerOffset + jitter);
+
+        const durationMs = 4600;
+        const startTime = performance.now();
+        let lastTickIndex = -1;
+
+        const animateFrame = now => {
+          const elapsed = now - startTime;
+          const t = Math.min(1, elapsed / durationMs);
+          // Плавное замедление (easeOutQuint)
+          const eased = 1 - Math.pow(1 - t, 5);
+          const currentX = targetX * eased;
+
+          rouletteTrack.style.transform = `translate3d(-${currentX}px, 0, 0)`;
+
+          // Звуковой щелчок каждый раз, когда центральный указатель пересекает границу карточки
+          const currentCardIdx = Math.floor((currentX + centerOffset) / stepPx);
+          if (currentCardIdx !== lastTickIndex) {
+            lastTickIndex = currentCardIdx;
+            const pitch = Math.max(220, 560 - t * 280);
+            SoundFX.playTick(pitch);
+          }
+
+          if (t < 1) {
+            requestAnimationFrame(animateFrame);
+          } else {
+            // Остановка рулетки и выдача награды
+            isRouletteSpinning = false;
+            if (closeDodepModalBtn) closeDodepModalBtn.disabled = false;
+
+            const winCardEl = rouletteTrack.querySelector('[data-winner-card="1"]');
+            if (winCardEl) {
+              winCardEl.classList.add('scale-105', 'ring-2', 'ring-amber-400');
+            }
+
+            if (winner.reward >= 600) {
+              SoundFX.playJackpotChord();
+            } else {
+              SoundFX.playReelStop(2);
+            }
+
+            balance += winner.reward;
+            flashDelta(winner.reward);
+            startDodepCooldown();
+
+            if (statusBannerEl) {
+              statusBannerEl.textContent = `${winner.icon} ${winner.title}: +$${winner.reward}`;
+              statusBannerEl.classList.remove('hidden', 'text-emerald-400', 'text-zinc-400');
+              statusBannerEl.classList.add('text-amber-300');
+            }
+
+            if (rouletteResultBox && rouletteResultTitle && rouletteResultAmount) {
+              rouletteResultTitle.textContent = `${winner.icon} ${winner.title} (шанс ${winner.chance}%)`;
+              rouletteResultAmount.textContent = `+$${winner.reward}`;
+              rouletteResultBox.classList.remove('hidden');
+            }
+
+            if (spinRouletteBtn) {
+              spinRouletteBtn.disabled = false;
+              spinRouletteBtn.textContent = `Забрать +$${winner.reward}`;
+              spinRouletteBtn.onclick = closeDodepModal;
+            }
+
+            updateUI();
+
+            // Автоматически закрываем окно через 2.8 секунды, если игрок не нажал "Забрать" сам
+            rouletteAutoCloseTimer = setTimeout(() => {
+              closeDodepModal();
+            }, 2800);
+          }
+        };
+
+        requestAnimationFrame(animateFrame);
+      }
+
+      // --- Логика капчи на трезвость ---
+
+      function renderRandomQuiz() {
+        if (!quizQuestionText || !quizOptionsList || !quizTopicBadge || !quizFeedbackText) return;
+        isQuizValidating = false;
+        quizFeedbackText.classList.add('hidden');
+        quizFeedbackText.textContent = '';
+
+        let idx;
+        do {
+          idx = Math.floor(Math.random() * QUIZ_BANK.length);
+        } while (idx === lastQuizIdx && QUIZ_BANK.length > 1);
+
+        lastQuizIdx = idx;
+        const item = QUIZ_BANK[idx];
+
+        quizTopicBadge.textContent = item.topic;
+        if (item.topic === 'ТОЭ') {
+          quizTopicBadge.className = 'inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wider bg-sky-500/15 text-sky-300 border border-sky-500/30';
+        } else if (item.topic === 'Метрология') {
+          quizTopicBadge.className = 'inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wider bg-amber-500/15 text-amber-300 border border-amber-500/30';
+        } else {
+          quizTopicBadge.className = 'inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wider bg-purple-500/15 text-purple-300 border border-purple-500/30';
+        }
+
+        quizQuestionText.textContent = item.question;
+
+        const variants = item.options.map((text, i) => ({
+          text,
+          isRight: i === item.correct
+        }));
+
+        for (let i = variants.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [variants[i], variants[j]] = [variants[j], variants[i]];
+        }
+
+        quizOptionsList.innerHTML = '';
+        variants.forEach(variant => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className =
+            'w-full p-3 text-left text-xs sm:text-sm font-medium text-zinc-200 bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 rounded-xl transition-all duration-150 cursor-pointer leading-snug';
+          btn.textContent = variant.text;
+          btn.addEventListener('click', () => checkQuizAnswer(btn, variant.isRight));
+          quizOptionsList.appendChild(btn);
+        });
+      }
+
+      function openSobrietyModal() {
+        if (!sobrietyOverlay) return;
+        isCaptchaActive = true;
+        if (dodepModal) dodepModal.classList.add('hidden');
+        renderRandomQuiz();
+        sobrietyOverlay.classList.remove('hidden');
+      }
+
+      function checkQuizAnswer(btnEl, isRight) {
+        if (isQuizValidating) return;
+        isQuizValidating = true;
+
+        const buttons = quizOptionsList.querySelectorAll('button');
+        buttons.forEach(b => (b.disabled = true));
+
+        if (isRight) {
+          btnEl.className =
+            'w-full p-3 text-left text-xs sm:text-sm font-bold text-emerald-100 bg-emerald-600/30 border-2 border-emerald-400 rounded-xl leading-snug';
+          quizFeedbackText.textContent = 'Верно! Трезвость подтверждена.';
+          quizFeedbackText.className = 'text-xs font-semibold text-emerald-400';
+
+          setTimeout(() => {
+            sobrietyOverlay.classList.add('hidden');
+            isCaptchaActive = false;
+            isQuizValidating = false;
+            spinsLeftBeforeCaptcha = randomInt(5, 10);
+            updateUI();
+          }, 550);
+        } else {
+          btnEl.className =
+            'w-full p-3 text-left text-xs sm:text-sm font-bold text-rose-100 bg-rose-600/30 border-2 border-rose-500 rounded-xl leading-snug';
+
+          if (sobrietyBox) {
+            sobrietyBox.classList.remove('error-wiggle');
+            void sobrietyBox.offsetWidth;
+            sobrietyBox.classList.add('error-wiggle');
+          }
+
+          quizFeedbackText.textContent = 'Азарт затуманил разум! Попробуй другой вопрос';
+          quizFeedbackText.className = 'text-xs font-semibold text-rose-400';
+
+          setTimeout(() => {
+            renderRandomQuiz();
+          }, 1200);
+        }
+      }
+
+      // --- Привязка событий ---
+
+      if (soundToggleBtn) {
+        soundToggleBtn.addEventListener('click', () => {
+          const isOn = SoundFX.toggle();
+          soundToggleBtn.textContent = isOn ? '🔊' : '🔇';
+          soundToggleBtn.classList.toggle('opacity-50', !isOn);
+        });
+      }
+
+      betPills.forEach(pill => {
+        pill.addEventListener('click', () => {
+          if (isSpinning || isCaptchaActive || isRouletteSpinning) return;
+          betMode = pill.dataset.bet === 'MAX' ? 'MAX' : parseInt(pill.dataset.bet, 10);
+          if (customBetInput) customBetInput.value = '';
+          updateUI();
+        });
+      });
+
+      if (customBetInput) {
+        const handleCustomBetInput = () => {
+          if (isSpinning || isCaptchaActive || isRouletteSpinning) return;
+          const raw = customBetInput.value.trim();
+          if (raw === '') {
+            customBetValue = null;
+            betMode = 'CUSTOM';
+            updateUI();
+            return;
+          }
+          const parsed = Math.floor(Number(raw));
+          if (!Number.isFinite(parsed) || parsed < 1) {
+            customBetValue = 0;
+          } else {
+            customBetValue = parsed;
+            if (String(parsed) !== raw) {
+              customBetInput.value = String(parsed);
+            }
+          }
+          betMode = 'CUSTOM';
+          updateUI();
+        };
+
+        customBetInput.addEventListener('focus', () => {
+          if (isSpinning || isCaptchaActive || isRouletteSpinning) return;
+          betMode = 'CUSTOM';
+          updateUI();
+        });
+
+        customBetInput.addEventListener('input', handleCustomBetInput);
+      }
+
+      nSlider.addEventListener('input', handleSliderChange);
+      spinBtn.addEventListener('click', spin);
+
+      if (dodepBtn) {
+        dodepBtn.addEventListener('click', openDodepModal);
+      }
+
+      if (closeDodepModalBtn) {
+        closeDodepModalBtn.addEventListener('click', closeDodepModal);
+      }
+
+      window.addEventListener('keydown', e => {
+        if (
+          e.code === 'Space' &&
+          !isSpinning &&
+          !isCaptchaActive &&
+          !isRouletteSpinning &&
+          document.activeElement !== nSlider &&
+          document.activeElement !== customBetInput
+        ) {
+          e.preventDefault();
+          spin();
+        }
+      });
+
+      // Стартовая инициализация интерфейса
+      handleSliderChange();
+    });
+  </script>
+</body>
+</html>
+```
