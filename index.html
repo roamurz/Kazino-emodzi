@@ -1,169 +1,305 @@
+```html
 <!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Эмодзи-Казино</title>
+  <title>Эмодзи-Слоты</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <style>
     :root {
       --bg-main: #09090b;
       --bg-card: #121216;
       --bg-inset: #18181d;
-      --border-subtle: #27272f;
-      --border-active: #52525b;
-      --text-primary: #fafafa;
-      --text-secondary: #a1a1aa;
+      --border-subtle: #24242b;
+      --border-active: #3f3f4a;
+      --text-primary: #f4f4f5;
       --text-muted: #71717a;
       --accent-green: #10b981;
       --accent-red: #ef4444;
-      --accent-amber: #f59e0b;
-      --accent-purple: #a855f7;
+      --accent-gold: #f59e0b;
+      --accent-cyan: #38bdf8;
     }
 
     * {
       box-sizing: border-box;
+      margin: 0;
+      padding: 0;
       -webkit-tap-highlight-color: transparent;
       user-select: none;
     }
 
     html, body {
-      margin: 0;
-      padding: 0;
       width: 100%;
-      height: 100dvh;
+      height: 100%;
       background-color: var(--bg-main);
       color: var(--text-primary);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif;
-      overflow: hidden;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      overflow-x: hidden;
+    }
+
+    body {
       display: flex;
       align-items: center;
       justify-content: center;
+      padding: 10px 12px;
+      min-height: 100dvh;
     }
 
-    .app-wrapper {
+    /* Полноэкранная багровая виньетка саспенса при х2! */
+    #suspenseVignette {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 20;
+      opacity: 0;
+      background: radial-gradient(circle at center, transparent 42%, rgba(220, 38, 38, 0.36) 100%);
+      transition: opacity 0.35s ease;
+    }
+
+    #suspenseVignette.active {
+      opacity: 1;
+      animation: vignettePulse 1.15s ease-in-out infinite alternate;
+    }
+
+    @keyframes vignettePulse {
+      from { opacity: 0.65; }
+      to { opacity: 1; }
+    }
+
+    /* Полноэкранные комбо-вспышки х1 / х2! / х3!!!! */
+    #comboSplashLayer {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 30;
+    }
+
+    #comboSplashText {
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      opacity: 0;
+      transform: scale(0.5);
+      will-change: transform, opacity;
+    }
+
+    .splash-x1 {
+      font-size: clamp(3.5rem, 15vw, 6rem);
+      color: var(--accent-green);
+      text-shadow: 0 0 32px rgba(16, 185, 129, 0.45);
+      animation: splashAnim 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .splash-x2 {
+      font-size: clamp(4.2rem, 18vw, 7.5rem);
+      color: var(--accent-red);
+      text-shadow: 0 0 42px rgba(239, 68, 68, 0.6);
+      animation: splashAnim 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .splash-x3 {
+      font-size: clamp(4.8rem, 21vw, 9rem);
+      color: var(--accent-gold);
+      text-shadow: 0 0 55px rgba(245, 158, 11, 0.75);
+      animation: splashJackpotAnim 1.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes splashAnim {
+      0% { opacity: 0; transform: scale(0.45); }
+      25% { opacity: 0.95; transform: scale(1.08); }
+      100% { opacity: 0; transform: scale(1.22); }
+    }
+
+    @keyframes splashJackpotAnim {
+      0% { opacity: 0; transform: scale(0.4) rotate(-4deg); }
+      20% { opacity: 1; transform: scale(1.14) rotate(2deg); }
+      60% { opacity: 0.95; transform: scale(1.05) rotate(0deg); }
+      100% { opacity: 0; transform: scale(1.28); }
+    }
+
+    /* Уведомление о получении ачивки */
+    #achievementToast {
+      position: fixed;
+      top: 12px;
+      left: 50%;
+      transform: translate(-50%, -140%);
+      width: min(92vw, 390px);
+      background-color: var(--bg-card);
+      border: 1px solid rgba(245, 158, 11, 0.55);
+      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.75), 0 0 22px rgba(245, 158, 11, 0.2);
+      border-radius: 16px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      z-index: 60;
+      pointer-events: none;
+      transition: transform 0.38s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    #achievementToast.show {
+      transform: translate(-50%, 0);
+    }
+
+    .toast-icon {
+      font-size: 1.7rem;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .toast-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .toast-tag {
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--accent-gold);
+    }
+
+    .toast-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .toast-reward {
+      font-size: 11px;
+      font-weight: 700;
+      color: #a1a1aa;
+      margin-top: 1px;
+    }
+
+    /* Главный контейнер приложения */
+    .app-shell {
+      position: relative;
+      z-index: 10;
       width: 100%;
       max-width: 430px;
-      height: 100%;
-      max-height: 780px;
-      padding: 12px 14px;
       display: flex;
       flex-direction: column;
-      justify-content: center;
+      gap: 9px;
     }
 
-    /* Карточки */
     .card {
       background-color: var(--bg-card);
       border: 1px solid var(--border-subtle);
       border-radius: 18px;
       padding: 11px 13px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
     }
 
-    /* 1. Верхняя панель */
+    /* 1. Верхняя панель: Баланс + Кнопки управления */
     .top-bar {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 8px;
-      margin-bottom: 8px;
     }
 
-    .balance-group {
+    .balance-block {
       display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-shrink: 0;
+      flex-direction: column;
     }
 
     .balance-label {
       font-size: 10px;
       font-weight: 700;
-      letter-spacing: 0.06em;
       text-transform: uppercase;
+      letter-spacing: 0.07em;
       color: var(--text-muted);
-      display: block;
     }
 
-    .balance-row {
-      display: flex;
-      align-items: baseline;
-      gap: 5px;
-    }
-
-    .balance-amount {
-      font-size: 21px;
+    #balanceValue {
+      font-size: 1.45rem;
       font-weight: 900;
-      letter-spacing: -0.02em;
+      letter-spacing: -0.03em;
       color: var(--text-primary);
+      line-height: 1.15;
     }
 
-    .balance-delta {
-      font-size: 11px;
-      font-weight: 800;
-      opacity: 0;
-      transition: opacity 0.25s ease;
-    }
-
-    .balance-delta.show-pos {
-      opacity: 1;
-      color: #34d399;
-    }
-
-    .balance-delta.show-neg {
-      opacity: 1;
-      color: #f87171;
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
 
     .icon-btn {
-      width: 32px;
-      height: 32px;
-      border-radius: 11px;
+      height: 36px;
+      min-width: 36px;
+      padding: 0 10px;
+      border-radius: 12px;
       background-color: var(--bg-inset);
       border: 1px solid var(--border-subtle);
       color: var(--text-primary);
-      font-size: 14px;
-      display: flex;
+      font-size: 13px;
+      font-weight: 800;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
+      gap: 4px;
       cursor: pointer;
-      transition: border-color 0.15s, transform 0.1s;
+      transition: border-color 0.15s, background-color 0.15s, transform 0.1s;
     }
 
     .icon-btn:active {
       transform: scale(0.94);
     }
 
-    .bet-controls {
+    .icon-btn.skip-active {
+      background-color: rgba(245, 158, 11, 0.16);
+      border-color: rgba(245, 158, 11, 0.55);
+      color: #fbbf24;
+    }
+
+    /* 2. Панель ставок */
+    .bet-card {
+      padding: 9px 11px;
+    }
+
+    .bet-row {
       display: flex;
       align-items: center;
-      background-color: var(--bg-inset);
-      border: 1px solid var(--border-subtle);
-      border-radius: 13px;
-      padding: 3px;
-      gap: 3px;
-      min-width: 0;
+      gap: 5px;
+    }
+
+    .bet-presets {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 5px;
+      flex: 1;
     }
 
     .bet-pill {
-      border: none;
-      background: transparent;
-      color: var(--text-secondary);
+      height: 34px;
+      border-radius: 10px;
+      background-color: var(--bg-inset);
+      border: 1px solid var(--border-subtle);
+      color: #a1a1aa;
       font-size: 11px;
-      font-weight: 700;
-      padding: 6px 7px;
-      border-radius: 9px;
+      font-weight: 800;
       cursor: pointer;
-      transition: background-color 0.15s, color 0.15s;
-    }
-
-    .bet-pill:hover:not(:disabled) {
-      color: var(--text-primary);
+      padding: 0 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: all 0.15s ease;
     }
 
     .bet-pill.active {
-      background-color: #27272a;
-      color: var(--text-primary);
+      background-color: #27272f;
+      border-color: #52525e;
+      color: #ffffff;
     }
 
     .bet-pill:disabled {
@@ -171,693 +307,707 @@
       cursor: not-allowed;
     }
 
-    .custom-bet-input {
-      width: 50px;
-      padding: 5px 4px;
-      border-radius: 9px;
-      background-color: #111115;
+    .custom-bet-wrap {
+      position: relative;
+      width: 72px;
+      flex-shrink: 0;
+    }
+
+    #customBetInput {
+      width: 100%;
+      height: 34px;
+      border-radius: 10px;
+      background-color: var(--bg-inset);
       border: 1px solid var(--border-subtle);
-      color: var(--text-primary);
-      font-size: 11px;
+      color: #fff;
+      font-family: inherit;
+      font-size: 12px;
       font-weight: 700;
       text-align: center;
       outline: none;
-      user-select: text;
-      -moz-appearance: textfield;
+      padding: 0 6px;
+      transition: border-color 0.15s;
     }
 
-    .custom-bet-input::-webkit-inner-spin-button,
-    .custom-bet-input::-webkit-outer-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
-    }
-
-    .custom-bet-input::placeholder {
+    #customBetInput::placeholder {
       color: var(--text-muted);
+      font-weight: 600;
     }
 
-    .custom-bet-input.active {
-      background-color: #27272a;
-      border-color: #71717a;
+    #customBetInput:focus,
+    #customBetInput.active {
+      border-color: #52525e;
+      background-color: #202026;
     }
 
-    .custom-bet-input.invalid {
+    #customBetInput.invalid {
       border-color: var(--accent-red);
       color: #fca5a5;
     }
 
-    /* 2. Панель сложности */
-    .difficulty-card {
-      margin-bottom: 10px;
-    }
-
-    .diff-header {
+    /* 3. Слайдер количества эмодзи N */
+    .pool-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
     }
 
-    .diff-title {
-      font-size: 13px;
-      font-weight: 600;
+    .pool-title {
+      font-size: 12.5px;
+      font-weight: 700;
       color: #d4d4d8;
     }
 
-    .diff-title strong {
-      font-size: 16px;
+    .pool-title span {
+      color: #fff;
       font-weight: 900;
-      color: var(--text-primary);
-      margin-left: 4px;
+      font-size: 14px;
     }
 
     .payout-badge {
-      font-size: 12px;
-      font-weight: 800;
-      padding: 3px 9px;
+      padding: 4px 9px;
       border-radius: 9px;
-      background-color: rgba(16, 185, 129, 0.14);
-      color: #6ee7b7;
-      border: 1px solid rgba(16, 185, 129, 0.28);
+      background-color: rgba(16, 185, 129, 0.13);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      color: #34d399;
+      font-size: 11.5px;
+      font-weight: 800;
     }
 
-    input[type="range"] {
+    #nSlider {
+      width: 100%;
       -webkit-appearance: none;
       appearance: none;
-      width: 100%;
-      background: transparent;
-      margin: 4px 0;
+      height: 6px;
+      border-radius: 99px;
+      background: #222229;
+      outline: none;
+      margin: 4px 0 9px;
       cursor: pointer;
     }
 
-    input[type="range"]::-webkit-slider-runnable-track {
-      height: 7px;
-      border-radius: 999px;
-      background: #27272a;
-    }
-
-    input[type="range"]::-webkit-slider-thumb {
+    #nSlider::-webkit-slider-thumb {
       -webkit-appearance: none;
       appearance: none;
-      width: 21px;
-      height: 21px;
+      width: 18px;
+      height: 18px;
       border-radius: 50%;
-      background: #fafafa;
-      margin-top: -7px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.75);
-      transition: transform 0.12s ease;
+      background: #e4e4e7;
+      border: 2px solid #09090b;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.25);
+      cursor: pointer;
     }
 
-    input[type="range"]:not(:disabled)::-webkit-slider-thumb:active {
-      transform: scale(1.16);
-    }
-
-    input[type="range"]:disabled {
-      opacity: 0.4;
+    #nSlider:disabled {
+      opacity: 0.45;
       cursor: not-allowed;
     }
 
-    .diff-footer {
-      margin-top: 7px;
-      padding-top: 7px;
-      border-top: 1px solid rgba(39, 39, 47, 0.85);
+    .pool-footer {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 8px;
     }
 
-    .active-emojis {
-      display: flex;
-      align-items: center;
-      gap: 4px;
+    #activeEmojisPreview {
       font-size: 15px;
-      line-height: 1;
-      overflow: hidden;
+      letter-spacing: 2px;
+      line-height: 1.2;
     }
 
-    .chance-text {
+    #winChanceText {
       font-size: 11px;
-      font-weight: 600;
-      color: var(--text-secondary);
+      font-weight: 700;
+      color: var(--text-muted);
       white-space: nowrap;
-      flex-shrink: 0;
     }
 
-    /* 3. Три квадратных слота */
+    /* 4. Три барабана слот-машины */
     .reels-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-      width: 100%;
+      gap: 9px;
     }
 
     .reel-box {
-      aspect-ratio: 1 / 1;
+      aspect-ratio: 1 / 1.03;
       background-color: var(--bg-card);
-      border: 2px solid var(--border-subtle);
-      border-radius: 22px;
+      border: 1.5px solid var(--border-subtle);
+      border-radius: 20px;
       display: flex;
       align-items: center;
       justify-content: center;
+      position: relative;
       overflow: hidden;
-      box-shadow: inset 0 4px 16px rgba(0, 0, 0, 0.6);
-      transition: border-color 0.2s, background-color 0.2s;
-    }
-
-    .reel-symbol {
-      font-size: clamp(46px, 14vw, 62px);
-      line-height: 1;
-      display: inline-block;
-      will-change: transform, filter;
-    }
-
-    .reel-spinning {
-      filter: blur(0.6px);
-      transform: scale(0.94);
-      opacity: 0.92;
-    }
-
-    @keyframes popLand {
-      0% { transform: translateY(-14px) scale(0.84); filter: blur(0.4px); }
-      65% { transform: translateY(4px) scale(1.08); filter: blur(0); }
-      100% { transform: translateY(0) scale(1); filter: blur(0); }
-    }
-
-    .reel-landed {
-      animation: popLand 0.24s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-    }
-
-    @keyframes suspenseShake {
-      0%, 100% {
-        border-color: #ef4444;
-        box-shadow: 0 0 26px rgba(239, 68, 68, 0.55), inset 0 0 14px rgba(239, 68, 68, 0.35);
-        transform: scale(1.03) translate(-1.5px, 1px) rotate(-0.8deg);
-      }
-      25% {
-        border-color: #f59e0b;
-        box-shadow: 0 0 36px rgba(245, 158, 11, 0.85), inset 0 0 20px rgba(245, 158, 11, 0.45);
-        transform: scale(1.05) translate(1.5px, -1px) rotate(0.8deg);
-      }
-      50% {
-        border-color: #dc2626;
-        box-shadow: 0 0 42px rgba(220, 38, 38, 0.95), inset 0 0 22px rgba(220, 38, 38, 0.5);
-        transform: scale(1.04) translate(-1px, -1.5px) rotate(-0.5deg);
-      }
-      75% {
-        border-color: #fde047;
-        box-shadow: 0 0 34px rgba(250, 204, 21, 0.8), inset 0 0 18px rgba(250, 204, 21, 0.4);
-        transform: scale(1.05) translate(1px, 1.5px) rotate(0.6deg);
-      }
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
     }
 
     .reel-box.suspense {
-      animation: suspenseShake 0.16s infinite ease-in-out;
-      background-color: rgba(153, 27, 27, 0.24);
-    }
-
-    @keyframes winPulse {
-      0%, 100% { border-color: rgba(52, 211, 153, 0.9); box-shadow: 0 0 22px rgba(16, 185, 129, 0.35); }
-      50% { border-color: #a7f3d0; box-shadow: 0 0 36px rgba(16, 185, 129, 0.65); }
+      border-color: rgba(239, 68, 68, 0.75);
+      box-shadow: 0 0 24px rgba(239, 68, 68, 0.25);
     }
 
     .reel-box.win {
-      animation: winPulse 1.15s infinite ease-in-out;
-      background-color: rgba(16, 185, 129, 0.14);
+      border-color: var(--accent-green);
+      box-shadow: 0 0 26px rgba(16, 185, 129, 0.3);
     }
 
-    /* 4. Кнопки управления (ровно 20px под слотами) */
-    .spin-btn {
-      margin-top: 20px;
+    .reel-box.gold-spin {
+      border-color: var(--accent-gold);
+      box-shadow: 0 0 24px rgba(245, 158, 11, 0.25);
+    }
+
+    .reel-symbol {
+      font-size: clamp(2.8rem, 12vw, 3.8rem);
+      line-height: 1;
+      display: inline-block;
+      will-change: transform;
+    }
+
+    .reel-symbol.pop-stop {
+      animation: reelPop 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    @keyframes reelPop {
+      0% { transform: scale(1.26); }
+      65% { transform: scale(0.93); }
+      100% { transform: scale(1); }
+    }
+
+    /* 5. Главная кнопка спина / Панель Риск-игры */
+    .primary-action-wrap {
       width: 100%;
-      padding: 15px 20px;
-      border: none;
-      border-radius: 18px;
-      background-color: #fafafa;
-      color: #09090b;
-      font-size: 17px;
-      font-weight: 900;
-      letter-spacing: -0.01em;
+    }
+
+    #spinBtn {
+      width: 100%;
+      height: 50px;
+      border-radius: 16px;
+      background-color: #27272e;
+      border: 1px solid #3f3f49;
+      color: #ffffff;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 800;
       cursor: pointer;
-      box-shadow: 0 6px 20px rgba(255, 255, 255, 0.08);
-      transition: transform 0.12s, background-color 0.15s, opacity 0.15s;
+      transition: background-color 0.15s, transform 0.1s, opacity 0.15s;
     }
 
-    .spin-btn:hover:not(:disabled) {
-      background-color: #e4e4e7;
+    #spinBtn:hover:not(:disabled) {
+      background-color: #31313a;
     }
 
-    .spin-btn:active:not(:disabled) {
-      transform: scale(0.98);
+    #spinBtn:active:not(:disabled) {
+      transform: scale(0.985);
     }
 
-    .spin-btn:disabled {
-      background-color: #27272a;
-      color: #71717a;
+    #spinBtn:disabled {
+      opacity: 0.45;
       cursor: not-allowed;
-      box-shadow: none;
     }
 
-    .secondary-btn {
-      margin-top: 8px;
+    #riskPanel {
+      display: grid;
+      grid-template-columns: 1fr 1.25fr;
+      gap: 8px;
+    }
+
+    #riskPanel.hidden {
+      display: none;
+    }
+
+    .risk-btn {
+      height: 50px;
+      border-radius: 15px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      border: 1px solid transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      transition: transform 0.1s, opacity 0.15s;
+    }
+
+    .risk-btn:active:not(:disabled) {
+      transform: scale(0.97);
+    }
+
+    .risk-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    #collectWinBtn {
+      background-color: rgba(16, 185, 129, 0.16);
+      border-color: rgba(16, 185, 129, 0.45);
+      color: #34d399;
+    }
+
+    #doubleRiskBtn {
+      background-color: rgba(245, 158, 11, 0.18);
+      border-color: rgba(245, 158, 11, 0.55);
+      color: #fbbf24;
+    }
+
+    /* 6. Кнопка Додеп + Инвентарь бонусных спинов */
+    #dodepBtn {
       width: 100%;
-      padding: 10px 14px;
+      height: 40px;
       border-radius: 14px;
       background-color: var(--bg-card);
       border: 1px solid var(--border-subtle);
       color: #d4d4d8;
+      font-family: inherit;
       font-size: 13px;
       font-weight: 700;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
       cursor: pointer;
-      transition: background-color 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
+      transition: border-color 0.15s, background-color 0.15s;
     }
 
-    .secondary-btn:hover:not(:disabled) {
-      background-color: var(--bg-inset);
+    #dodepBtn:hover:not(:disabled) {
       border-color: var(--border-active);
+      background-color: var(--bg-inset);
     }
 
-    .secondary-btn:active:not(:disabled) {
-      transform: scale(0.99);
-    }
-
-    .secondary-btn:disabled {
-      opacity: 0.48;
+    #dodepBtn:disabled {
+      opacity: 0.45;
       cursor: not-allowed;
     }
 
-    @keyframes dodepGlow {
-      0%, 100% { border-color: rgba(245, 158, 11, 0.45); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.15); }
-      50% { border-color: rgba(251, 191, 36, 0.95); box-shadow: 0 0 16px 2px rgba(245, 158, 11, 0.25); }
+    .bonus-inventory-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
     }
 
-    .secondary-btn.attention {
-      animation: dodepGlow 1.5s infinite ease-in-out;
-      color: #fde68a;
-    }
-
-    .skip-btn {
-      margin-top: 8px;
-      width: 100%;
-      padding: 9px 14px;
-      border-radius: 13px;
-      background-color: rgba(18, 18, 22, 0.9);
+    .bonus-btn {
+      height: 36px;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 11.5px;
+      font-weight: 800;
+      cursor: pointer;
       border: 1px solid var(--border-subtle);
-      color: var(--text-secondary);
-      font-size: 12px;
-      font-weight: 700;
+      background-color: var(--bg-card);
+      color: #e4e4e7;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 6px;
-      cursor: pointer;
+      gap: 4px;
       transition: all 0.15s ease;
     }
 
-    .skip-btn.active {
+    .bonus-btn.gold-ready {
       background-color: rgba(245, 158, 11, 0.14);
-      border-color: rgba(251, 191, 36, 0.75);
-      color: #fde68a;
-      box-shadow: 0 0 14px rgba(245, 158, 11, 0.16);
+      border-color: rgba(245, 158, 11, 0.48);
+      color: #fbbf24;
     }
 
-    /* 5. Статусная строка */
-    .status-bar {
-      min-height: 26px;
-      margin-top: 8px;
+    .bonus-btn.diamond-ready {
+      background-color: rgba(56, 189, 248, 0.14);
+      border-color: rgba(56, 189, 248, 0.45);
+      color: #7dd3fc;
+    }
+
+    .bonus-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* 7. Статистика сессии и Поделиться */
+    .session-stats-row {
       display: flex;
       align-items: center;
-      justify-content: center;
-      text-align: center;
+      justify-content: space-between;
+      gap: 6px;
+      margin-top: 1px;
     }
 
-    .status-text {
-      margin: 0;
-      font-size: 15px;
-      font-weight: 800;
-      letter-spacing: -0.01em;
-    }
-
-    .status-text.win { color: #34d399; }
-    .status-text.info { color: #fcd34d; }
-    .status-text.error { color: #f87171; }
-    .hidden { display: none !important; }
-
-    /* Виньетка саспенса и полноэкранные вспышки */
-    .vignette-layer {
-      position: fixed;
-      inset: 0;
-      z-index: 9990;
-      pointer-events: none;
-    }
-
-    @keyframes vignettePulse {
-      0%, 100% {
-        box-shadow: inset 0 0 75px 30px rgba(127, 29, 29, 0.78), inset 0 0 135px 60px rgba(0, 0, 0, 0.92);
-      }
-      50% {
-        box-shadow: inset 0 0 105px 44px rgba(220, 38, 38, 0.9), inset 0 0 170px 76px rgba(0, 0, 0, 0.97);
-      }
-    }
-
-    .vignette-layer.active {
-      animation: vignettePulse 0.6s infinite ease-in-out;
-    }
-
-    .combo-layer {
-      position: fixed;
-      inset: 0;
-      z-index: 9999;
-      pointer-events: none;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    .session-stats {
+      font-size: 10.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+      white-space: nowrap;
       overflow: hidden;
+      text-overflow: ellipsis;
     }
 
-    .combo-text {
-      font-weight: 900;
-      font-style: italic;
-      letter-spacing: -0.04em;
-      line-height: 1;
+    .share-pill-btn {
+      padding: 4px 9px;
+      border-radius: 9px;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      color: #e4e4e7;
+      font-family: inherit;
+      font-size: 10.5px;
+      font-weight: 800;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: border-color 0.15s, background-color 0.15s, transform 0.1s;
+    }
+
+    .share-pill-btn:active {
+      transform: scale(0.95);
+    }
+
+    /* 8. Статус / Мемные цитаты */
+    .status-bar {
+      min-height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       text-align: center;
+      padding: 2px 4px;
     }
 
-    @keyframes comboPop {
-      0% { opacity: 0; transform: scale(0.35) rotate(-6deg); }
-      22% { opacity: 1; transform: scale(1.12) rotate(2deg); }
-      38% { opacity: 1; transform: scale(1) rotate(0deg); }
-      76% { opacity: 1; transform: scale(1.04) translateY(-4px); }
-      100% { opacity: 0; transform: scale(1.28) translateY(-16px); }
+    #statusBanner {
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.32;
+      color: #a1a1aa;
+      opacity: 0;
+      transition: opacity 0.2s ease;
     }
 
-    .combo-anim {
-      animation: comboPop 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    #statusBanner.visible {
+      opacity: 1;
     }
 
-    @keyframes comboJackpot {
-      0% { opacity: 0; transform: scale(0.25) rotate(-10deg); }
-      18% { opacity: 1; transform: scale(1.22) rotate(3deg); }
-      32% { opacity: 1; transform: scale(1.05) rotate(-1deg); }
-      78% { opacity: 1; transform: scale(1.1) translateY(-6px); }
-      100% { opacity: 0; transform: scale(1.42) translateY(-22px); }
+    #statusBanner.win {
+      color: #34d399;
     }
 
-    .combo-jackpot-anim {
-      animation: comboJackpot 1.1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    #statusBanner.loss {
+      color: #f87171;
     }
 
-    @keyframes screenShake {
-      0%, 100% { transform: translate(0, 0) rotate(0deg); }
-      15% { transform: translate(-5px, 4px) rotate(-0.6deg); }
-      30% { transform: translate(5px, -4px) rotate(0.6deg); }
-      45% { transform: translate(-4px, -3px) rotate(-0.4deg); }
-      60% { transform: translate(4px, 3px) rotate(0.4deg); }
-      75% { transform: translate(-2px, 2px) rotate(-0.2deg); }
-    }
-
-    .shake {
-      animation: screenShake 0.36s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+    #statusBanner.info {
+      color: #e4e4e7;
     }
 
     /* Модальные окна */
     .modal-backdrop {
       position: fixed;
       inset: 0;
-      z-index: 9995;
-      background-color: rgba(0, 0, 0, 0.85);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
+      background-color: rgba(0, 0, 0, 0.82);
+      backdrop-filter: blur(5px);
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 14px;
+      padding: 16px;
+      z-index: 50;
+    }
+
+    .modal-backdrop.hidden {
+      display: none;
     }
 
     .modal-card {
       width: 100%;
-      max-width: 410px;
-      max-height: 90dvh;
+      max-width: 400px;
+      max-height: 86dvh;
       overflow-y: auto;
       background-color: var(--bg-card);
-      border: 1px solid var(--border-subtle);
-      border-radius: 24px;
-      padding: 18px;
-      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8);
+      border: 1px solid #2e2e38;
+      border-radius: 22px;
+      padding: 18px 16px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.85);
     }
 
     .modal-header {
       display: flex;
-      align-items: flex-start;
+      align-items: center;
       justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
     }
 
     .modal-title {
-      margin: 0;
-      font-size: 18px;
+      font-size: 16px;
       font-weight: 900;
-      color: var(--text-primary);
+      color: #fff;
     }
 
-    .modal-subtitle {
-      margin: 2px 0 0;
-      font-size: 12px;
-      color: var(--text-secondary);
+    .modal-close-btn {
+      width: 30px;
+      height: 30px;
+      border-radius: 10px;
+      background-color: var(--bg-inset);
+      border: 1px solid var(--border-subtle);
+      color: #a1a1aa;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
     }
 
-    /* Рулетка Додепа */
-    .roulette-viewport {
+    /* Додеп-рулетка (CS-кейсы) */
+    .case-viewport {
       position: relative;
       width: 100%;
-      height: 122px;
-      background-color: #09090b;
-      border: 2px solid var(--border-subtle);
+      height: 98px;
+      background-color: var(--bg-inset);
+      border: 1px solid var(--border-subtle);
       border-radius: 16px;
       overflow: hidden;
-      margin: 12px 0;
+      margin: 10px 0 12px;
     }
 
-    .roulette-pointer-top {
-      position: absolute;
-      top: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 20;
-      width: 0;
-      height: 0;
-      border-left: 8px solid transparent;
-      border-right: 8px solid transparent;
-      border-top: 10px solid #fbbf24;
-      pointer-events: none;
-    }
-
-    .roulette-pointer-bottom {
-      position: absolute;
-      bottom: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 20;
-      width: 0;
-      height: 0;
-      border-left: 8px solid transparent;
-      border-right: 8px solid transparent;
-      border-bottom: 10px solid #fbbf24;
-      pointer-events: none;
-    }
-
-    .roulette-line {
+    .case-pointer {
       position: absolute;
       top: 0;
       bottom: 0;
       left: 50%;
-      width: 2px;
+      width: 3px;
       transform: translateX(-50%);
-      background-color: rgba(251, 191, 36, 0.85);
-      box-shadow: 0 0 10px rgba(251, 191, 36, 0.9);
-      z-index: 15;
-      pointer-events: none;
+      background-color: var(--accent-gold);
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.9);
+      z-index: 5;
     }
 
-    .roulette-fade-left, .roulette-fade-right {
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      width: 34px;
-      z-index: 10;
-      pointer-events: none;
-    }
-
-    .roulette-fade-left {
-      left: 0;
-      background: linear-gradient(to right, #09090b, transparent);
-    }
-
-    .roulette-fade-right {
-      right: 0;
-      background: linear-gradient(to left, #09090b, transparent);
-    }
-
-    .roulette-track {
+    .case-strip {
       display: flex;
       align-items: center;
       height: 100%;
       will-change: transform;
     }
 
-    .roulette-item {
-      width: 108px;
-      height: 102px;
-      margin: 0 4px;
+    .case-item {
+      width: 114px;
+      height: 82px;
+      margin: 0 3px;
       flex-shrink: 0;
-      border-radius: 14px;
-      border: 2px solid #3f3f46;
-      background-color: #18181d;
+      border-radius: 12px;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-subtle);
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: space-between;
-      padding: 8px 6px;
+      justify-content: center;
+      padding: 6px;
       text-align: center;
     }
 
-    .roulette-item.gold { border-color: rgba(251, 191, 36, 0.85); background-color: rgba(245, 158, 11, 0.14); }
-    .roulette-item.purple { border-color: rgba(192, 132, 252, 0.8); background-color: rgba(168, 85, 247, 0.14); }
-    .roulette-item.blue { border-color: rgba(56, 189, 248, 0.75); background-color: rgba(14, 165, 233, 0.14); }
-    .roulette-item.green { border-color: rgba(52, 211, 153, 0.75); background-color: rgba(16, 185, 129, 0.14); }
+    .case-item.rarity-legendary { border-color: rgba(245, 158, 11, 0.7); }
+    .case-item.rarity-epic { border-color: rgba(168, 85, 247, 0.65); }
+    .case-item.rarity-rare { border-color: rgba(56, 189, 248, 0.55); }
 
-    .r-icon { font-size: 22px; line-height: 1; }
-    .r-name {
-      font-size: 10px;
-      font-weight: 600;
+    .case-item-emoji {
+      font-size: 22px;
+      line-height: 1.1;
+    }
+
+    .case-item-name {
+      font-size: 9.5px;
+      font-weight: 700;
+      color: #d4d4d8;
+      margin-top: 3px;
       line-height: 1.15;
-      color: #e4e4e7;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-    .r-val { font-size: 12px; font-weight: 900; color: #34d399; }
-
-    .roulette-result {
-      background-color: var(--bg-inset);
-      border: 1px solid var(--border-subtle);
-      border-radius: 14px;
-      padding: 10px;
-      text-align: center;
-      margin-bottom: 10px;
     }
 
-    .odds-grid {
+    .case-item-val {
+      font-size: 11px;
+      font-weight: 900;
+      color: #34d399;
+      margin-top: 2px;
+    }
+
+    .dodep-odds-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 4px;
-      margin-bottom: 12px;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 4px 8px;
+      margin-top: 8px;
+      padding: 8px 10px;
+      background-color: var(--bg-inset);
+      border-radius: 12px;
+      font-size: 10.5px;
+      color: #a1a1aa;
     }
 
-    .odds-cell {
-      background-color: var(--bg-inset);
-      border: 1px solid var(--border-subtle);
-      border-radius: 8px;
-      padding: 4px 6px;
-      font-size: 10px;
-      color: var(--text-secondary);
+    .dodep-odds-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 4px;
+    }
+
+    /* Алмазное колесо фортуны */
+    .wheel-wrapper {
+      position: relative;
+      width: 210px;
+      height: 210px;
+      margin: 12px auto 14px;
+    }
+
+    .wheel-pointer {
+      position: absolute;
+      top: -8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 10px solid transparent;
+      border-right: 10px solid transparent;
+      border-top: 16px solid #fff;
+      z-index: 5;
+      filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.8));
+    }
+
+    #diamondWheelDisc {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      border: 4px solid #2e2e38;
+      box-shadow: 0 0 28px rgba(56, 189, 248, 0.2);
+      will-change: transform;
+    }
+
+    .wheel-center-cap {
+      position: absolute;
+      inset: 50%;
+      width: 44px;
+      height: 44px;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background-color: var(--bg-card);
+      border: 2px solid #3f3f4a;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 4px;
-      overflow: hidden;
+      justify-content: center;
+      font-size: 18px;
+      z-index: 4;
     }
 
-    .odds-cell span:first-child {
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+    .color-bet-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 10px;
     }
 
-    .odds-cell span:last-child {
+    .color-choice-btn {
+      padding: 10px 6px;
+      border-radius: 13px;
+      border: 1.5px solid var(--border-subtle);
+      background-color: var(--bg-inset);
+      color: #fff;
+      font-family: inherit;
+      font-size: 12px;
       font-weight: 800;
-      color: var(--text-muted);
-      flex-shrink: 0;
-    }
-
-    .amber-btn {
-      width: 100%;
-      padding: 13px 16px;
-      border: none;
-      border-radius: 15px;
-      background-color: #fbbf24;
-      color: #09090b;
-      font-size: 15px;
-      font-weight: 900;
       cursor: pointer;
-      transition: background-color 0.15s, transform 0.1s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      transition: transform 0.1s, border-color 0.15s;
     }
 
-    .amber-btn:hover:not(:disabled) {
-      background-color: #fcd34d;
+    .color-choice-btn:active:not(:disabled) {
+      transform: scale(0.95);
     }
 
-    .amber-btn:disabled {
-      background-color: #27272a;
-      color: #71717a;
+    .color-choice-btn:disabled {
+      opacity: 0.45;
       cursor: not-allowed;
     }
 
-    /* Проверка на трезвость */
-    .quiz-top-row {
+    .color-choice-btn.red { border-color: rgba(239, 68, 68, 0.55); }
+    .color-choice-btn.black { border-color: rgba(161, 161, 170, 0.45); }
+    .color-choice-btn.green { border-color: rgba(16, 185, 129, 0.6); }
+
+    /* Список достижений */
+    .ach-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .ach-card {
+      padding: 10px 12px;
+      border-radius: 14px;
+      background-color: var(--bg-inset);
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      opacity: 0.58;
+    }
+
+    .ach-card.unlocked {
+      opacity: 1;
+      border-color: rgba(245, 158, 11, 0.48);
+      background-color: rgba(245, 158, 11, 0.06);
+    }
+
+    .ach-icon {
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+
+    .ach-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .ach-name {
+      font-size: 13px;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .ach-desc {
+      font-size: 11px;
+      color: #a1a1aa;
+      margin-top: 2px;
+    }
+
+    .ach-reward-pill {
+      font-size: 10.5px;
+      font-weight: 800;
+      color: #fbbf24;
+      margin-top: 4px;
+    }
+
+    .reset-progress-btn {
+      width: 100%;
+      margin-top: 12px;
+      padding: 10px 14px;
+      border-radius: 13px;
+      background-color: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      color: #fca5a5;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: background-color 0.15s, border-color 0.15s;
+    }
+
+    .reset-progress-btn.confirming {
+      background-color: rgba(239, 68, 68, 0.28);
+      border-color: #ef4444;
+      color: #ffffff;
+    }
+
+    /* Тест на трезвость (Игровая викторина) */
+    .quiz-meta {
       display: flex;
       align-items: center;
       justify-content: space-between;
+      font-size: 11px;
+      font-weight: 700;
+      color: #a1a1aa;
       margin-bottom: 10px;
     }
 
-    .quiz-badge {
-      padding: 4px 10px;
-      border-radius: 8px;
-      font-size: 11px;
+    .quiz-question {
+      font-size: 14.5px;
       font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      background-color: rgba(168, 85, 247, 0.16);
-      color: #d8b4fe;
-      border: 1px solid rgba(168, 85, 247, 0.32);
-    }
-
-    .quiz-counter {
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--text-secondary);
-    }
-
-    .quiz-stakes-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background-color: var(--bg-inset);
-      border: 1px solid var(--border-subtle);
-      border-radius: 11px;
-      padding: 6px 12px;
-      margin: 8px 0 12px;
-      font-size: 11px;
-      font-weight: 800;
-    }
-
-    .quiz-question-box {
-      background-color: var(--bg-inset);
-      border: 1px solid var(--border-subtle);
-      border-radius: 15px;
-      padding: 13px;
+      color: #fff;
+      line-height: 1.38;
       margin-bottom: 12px;
-      font-size: 14px;
-      font-weight: 600;
-      line-height: 1.45;
-      color: #f4f4f5;
     }
 
     .quiz-options {
@@ -866,848 +1016,1432 @@
       gap: 8px;
     }
 
-    .quiz-option-btn {
+    .quiz-opt-btn {
       width: 100%;
-      padding: 11px 13px;
       text-align: left;
+      padding: 11px 13px;
+      border-radius: 13px;
       background-color: var(--bg-inset);
       border: 1px solid var(--border-subtle);
-      border-radius: 13px;
-      color: #e4e4e7;
+      color: #f4f4f5;
+      font-family: inherit;
       font-size: 13px;
-      font-weight: 500;
-      line-height: 1.35;
+      font-weight: 700;
       cursor: pointer;
       transition: background-color 0.15s, border-color 0.15s;
     }
 
-    .quiz-option-btn:hover:not(:disabled) {
-      background-color: #27272a;
-      border-color: #52525b;
+    .quiz-opt-btn:hover {
+      border-color: var(--border-active);
+      background-color: #202028;
     }
 
-    .quiz-option-btn.correct {
-      background-color: rgba(16, 185, 129, 0.25);
-      border: 2px solid #34d399;
-      color: #d1fae5;
-      font-weight: 700;
+    .quiz-opt-btn.wrong {
+      border-color: var(--accent-red);
+      background-color: rgba(239, 68, 68, 0.2);
+      color: #fca5a5;
     }
 
-    .quiz-option-btn.wrong {
-      background-color: rgba(239, 68, 68, 0.25);
-      border: 2px solid #f87171;
-      color: #fee2e2;
-      font-weight: 700;
+    .quiz-opt-btn.correct {
+      border-color: var(--accent-green);
+      background-color: rgba(16, 185, 129, 0.22);
+      color: #6ee7b7;
     }
 
-    @keyframes wiggle {
-      0%, 100% { transform: translateX(0); }
-      20% { transform: translateX(-6px); }
-      40% { transform: translateX(6px); }
-      60% { transform: translateX(-4px); }
-      80% { transform: translateX(4px); }
-    }
-
-    .wiggle {
-      animation: wiggle 0.35s ease-in-out;
-    }
-
-    .quiz-feedback {
-      min-height: 22px;
+    #quizFeedback {
       margin-top: 10px;
-      text-align: center;
       font-size: 12px;
       font-weight: 700;
+      min-height: 18px;
+      text-align: center;
+    }
+
+    /* Модалка анимации Риск-игры (монетка) */
+    .coin-stage {
+      width: 96px;
+      height: 96px;
+      margin: 14px auto;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #fbbf24, #d97706);
+      border: 3px solid #fef08a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      box-shadow: 0 0 30px rgba(245, 158, 11, 0.45);
+    }
+
+    .coin-flipping {
+      animation: coinSpin 0.18s linear infinite;
+    }
+
+    @keyframes coinSpin {
+      0% { transform: rotateY(0deg) scale(1); }
+      50% { transform: rotateY(90deg) scale(1.1); }
+      100% { transform: rotateY(180deg) scale(1); }
+    }
+
+    /* Модалка предпросмотра карточки рекорда (PNG) */
+    .share-preview-frame {
+      width: 100%;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid rgba(245, 158, 11, 0.42);
+      background-color: #09090b;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.75);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #sharePreviewImg {
+      width: 100%;
+      max-height: 54dvh;
+      object-fit: contain;
+      display: block;
+    }
+
+    .share-actions-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .share-secondary-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .share-action-btn {
+      height: 42px;
+      border-radius: 13px;
+      font-family: inherit;
+      font-size: 12.5px;
+      font-weight: 800;
+      cursor: pointer;
+      border: 1px solid var(--border-subtle);
+      background-color: var(--bg-inset);
+      color: #f4f4f5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: transform 0.1s, border-color 0.15s, background-color 0.15s;
+    }
+
+    .share-action-btn:active {
+      transform: scale(0.97);
+    }
+
+    .share-action-btn.primary {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.24), rgba(217, 119, 6, 0.16));
+      border-color: rgba(245, 158, 11, 0.58);
+      color: #fbbf24;
+      font-size: 13.5px;
     }
   </style>
 </head>
 <body>
+  <!-- Виньетка саспенса и слой комбо-вспышек -->
+  <div id="suspenseVignette"></div>
+  <div id="comboSplashLayer">
+    <div id="comboSplashText"></div>
+  </div>
 
-  <main id="appContainer" class="app-wrapper">
+  <!-- Всплывающий тост достижения -->
+  <div id="achievementToast" role="status" aria-live="polite">
+    <div id="toastIcon" class="toast-icon">🏆</div>
+    <div class="toast-body">
+      <div class="toast-tag">Достижение разблокировано!</div>
+      <div id="toastTitle" class="toast-title">Название</div>
+      <div id="toastReward" class="toast-reward">Награда</div>
+    </div>
+  </div>
+
+  <!-- Основной интерфейс -->
+  <main class="app-shell">
     <!-- 1. Верхняя панель -->
     <section class="card top-bar">
-      <div class="balance-group">
-        <div>
-          <span class="balance-label">Баланс</span>
-          <div class="balance-row">
-            <span id="balanceValue" class="balance-amount">$100</span>
-            <span id="balanceDelta" class="balance-delta">+$0</span>
-          </div>
+      <div class="balance-block">
+        <span class="balance-label">Баланс</span>
+        <span id="balanceValue">$100</span>
+      </div>
+      <div class="top-actions">
+        <button id="fastSkipBtn" type="button" class="icon-btn" aria-pressed="false" title="Быстрый пропуск при промахе">
+          ⚡
+        </button>
+        <button id="soundToggleBtn" type="button" class="icon-btn" title="Звук">
+          🔊
+        </button>
+        <button id="achievementsBtn" type="button" class="icon-btn" title="Достижения">
+          🏆 0/8
+        </button>
+      </div>
+    </section>
+
+    <!-- 2. Ставки -->
+    <section class="card bet-card">
+      <div class="bet-row">
+        <div class="bet-presets">
+          <button type="button" class="bet-pill active" data-bet="5">$5</button>
+          <button type="button" class="bet-pill" data-bet="10">$10</button>
+          <button type="button" class="bet-pill" data-bet="25">$25</button>
+          <button type="button" class="bet-pill" data-bet="MAX">MAX</button>
         </div>
-        <button id="soundToggleBtn" type="button" class="icon-btn" title="Звук" aria-label="Переключить звук">🔊</button>
-      </div>
-
-      <div class="bet-controls">
-        <button type="button" data-bet="5" class="bet-pill">$5</button>
-        <button type="button" data-bet="10" class="bet-pill active">$10</button>
-        <button type="button" data-bet="25" class="bet-pill">$25</button>
-        <button type="button" data-bet="MAX" class="bet-pill">MAX</button>
-        <input
-          id="customBetInput"
-          type="number"
-          min="1"
-          step="1"
-          inputmode="numeric"
-          placeholder="Своя"
-          aria-label="Своя ставка"
-          class="custom-bet-input"
-        />
+        <div class="custom-bet-wrap">
+          <input id="customBetInput" type="number" inputmode="numeric" min="1" step="1" placeholder="Своя" aria-label="Своя ставка" />
+        </div>
       </div>
     </section>
 
-    <!-- 2. Панель сложности (N) -->
-    <section class="card difficulty-card">
-      <div class="diff-header">
-        <label for="nSlider" class="diff-title">
-          Кол-во эмодзи (N): <strong id="nDisplay">5</strong>
-        </label>
-        <span id="payoutBadge" class="payout-badge">x25 ($250)</span>
+    <!-- 3. Настройка сложности N -->
+    <section class="card">
+      <div class="pool-header">
+        <div class="pool-title">Кол-во эмодзи (N): <span id="nDisplay">5</span></div>
+        <div id="payoutBadge" class="payout-badge">x25 ($250)</div>
       </div>
-
-      <input id="nSlider" type="range" min="2" max="10" value="5" step="1" />
-
-      <div class="diff-footer">
-        <div id="activeEmojisRow" class="active-emojis"></div>
-        <span id="chanceBadge" class="chance-text">Шанс: 4% (x25)</span>
+      <input id="nSlider" type="range" min="2" max="10" value="5" step="1" aria-label="Количество эмодзи" />
+      <div class="pool-footer">
+        <div id="activeEmojisPreview">🍒 🍋 🍇 🍉 🔔</div>
+        <div id="winChanceText">Шанс: 4.00%</div>
       </div>
     </section>
 
-    <!-- 3. Три квадратных слота -->
-    <section class="reels-grid" aria-label="Слоты">
-      <div id="reelBox0" class="reel-box">
-        <span id="reelSymbol0" class="reel-symbol">🍒</span>
-      </div>
-      <div id="reelBox1" class="reel-box">
-        <span id="reelSymbol1" class="reel-symbol">🍋</span>
-      </div>
-      <div id="reelBox2" class="reel-box">
-        <span id="reelSymbol2" class="reel-symbol">🍇</span>
-      </div>
+    <!-- 4. Три слот-барабана -->
+    <section class="reels-grid" aria-label="Игровые барабаны">
+      <div id="reelBox0" class="reel-box"><span id="reelSym0" class="reel-symbol">🍒</span></div>
+      <div id="reelBox1" class="reel-box"><span id="reelSym1" class="reel-symbol">🍋</span></div>
+      <div id="reelBox2" class="reel-box"><span id="reelSym2" class="reel-symbol">🍇</span></div>
     </section>
 
-    <!-- 4. Кнопка запуска (ровно 20px под слотами) -->
-    <button id="spinBtn" type="button" class="spin-btn">Крутить за $10</button>
+    <!-- 5. Кнопка спина / Риск-игра -->
+    <div class="primary-action-wrap">
+      <button id="spinBtn" type="button">Крутить за $10</button>
+      <div id="riskPanel" class="hidden">
+        <button id="collectWinBtn" type="button" class="risk-btn">Забрать $250</button>
+        <button id="doubleRiskBtn" type="button" class="risk-btn">🎲 Удвоить до $500</button>
+      </div>
+    </div>
 
-    <!-- 5. Кнопка Додеп -->
-    <button id="dodepBtn" type="button" class="secondary-btn">
-      <span>💸 Додеп</span>
-    </button>
+    <!-- 6. Додеп и Бонусные спины -->
+    <button id="dodepBtn" type="button">💸 Додеп</button>
 
-    <!-- 6. Переключатель быстрого пропуска при промахе -->
-    <button id="fastSkipBtn" type="button" class="skip-btn" aria-pressed="false">
-      <span>⚡ Пропуск при промахе: ВЫКЛ</span>
-    </button>
+    <div class="bonus-inventory-row">
+      <button id="goldSpinBtn" type="button" class="bonus-btn" disabled>🪙 Золотой (0)</button>
+      <button id="diamondSpinBtn" type="button" class="bonus-btn">💎 Колесо ($100)</button>
+    </div>
 
-    <!-- 7. Статус -->
+    <!-- 7. Статистика сессии и Поделиться -->
+    <div class="session-stats-row">
+      <div id="sessionStatsRow" class="session-stats">Пик: $100 • Спинов: 0 • Джекпотов: 0</div>
+      <button id="shareBtn" type="button" class="share-pill-btn">📤 Поделиться</button>
+    </div>
+
+    <!-- 8. Мемные цитаты / статус -->
     <div class="status-bar">
-      <p id="statusBanner" class="status-text hidden"></p>
+      <div id="statusBanner"></div>
     </div>
   </main>
 
-  <!-- Виньетка саспенса -->
-  <div id="suspenseVignette" class="vignette-layer hidden" aria-hidden="true"></div>
-
-  <!-- Полноэкранные вспышки х1, х2!, х3!!!! -->
-  <div class="combo-layer" aria-hidden="true">
-    <span id="comboSplashText" class="combo-text hidden"></span>
-  </div>
-
-  <!-- Модальное окно: Рулетка Додепа -->
-  <div id="dodepModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+  <!-- Модалка: Рулетка Додеп -->
+  <div id="dodepModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="dodepModalTitle">
     <div class="modal-card">
       <div class="modal-header">
-        <div>
-          <h2 class="modal-title">💸 Рулетка Додепа</h2>
-          <p class="modal-subtitle">Испытай удачу (перезарядка 60 сек)</p>
-        </div>
-        <button id="closeDodepBtn" type="button" class="icon-btn" aria-label="Закрыть">✕</button>
+        <div id="dodepModalTitle" class="modal-title">💸 Рулетка Додепа</div>
+        <button id="closeDodepBtn" type="button" class="modal-close-btn" aria-label="Закрыть">✕</button>
       </div>
-
-      <div id="rouletteViewport" class="roulette-viewport">
-        <div class="roulette-pointer-top"></div>
-        <div class="roulette-pointer-bottom"></div>
-        <div class="roulette-line"></div>
-        <div class="roulette-fade-left"></div>
-        <div class="roulette-fade-right"></div>
-        <div id="rouletteTrack" class="roulette-track"></div>
+      <div style="font-size: 12px; color: #a1a1aa;">Ищем способы пополнить баланс. Перезарядка после крутки — 60 сек.</div>
+      <div class="case-viewport">
+        <div class="case-pointer"></div>
+        <div id="caseStrip" class="case-strip"></div>
       </div>
-
-      <div id="rouletteResultBox" class="roulette-result hidden">
-        <div style="font-size: 11px; color: #71717a; text-transform: uppercase; font-weight: 700;">Выпало пополнение</div>
-        <div id="rouletteResultTitle" style="font-size: 15px; font-weight: 800; color: #fafafa; margin-top: 2px;"></div>
-        <div id="rouletteResultAmount" style="font-size: 20px; font-weight: 900; color: #34d399; margin-top: 2px;">+$0</div>
-      </div>
-
-      <div id="rouletteOddsLegend" class="odds-grid"></div>
-
-      <button id="spinRouletteBtn" type="button" class="amber-btn">Крутить рулетку</button>
+      <div id="dodepResultText" style="text-align: center; font-size: 13px; font-weight: 800; min-height: 20px; color: #fbbf24;"></div>
+      <div id="dodepOddsGrid" class="dodep-odds-grid"></div>
     </div>
   </div>
 
-  <!-- Модальное окно: Проверка на трезвость -->
-  <div id="sobrietyModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" style="z-index: 9998;">
-    <div id="sobrietyBox" class="modal-card">
-      <div class="quiz-top-row">
-        <span class="quiz-badge">🎮 Игры</span>
-        <span id="quizCounterBadge" class="quiz-counter">Вопрос 1/50</span>
+  <!-- Модалка: Алмазное колесо -->
+  <div id="diamondModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="diamondModalTitle">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div id="diamondModalTitle" class="modal-title">💎 Алмазное колесо</div>
+        <button id="closeDiamondBtn" type="button" class="modal-close-btn" aria-label="Закрыть">✕</button>
       </div>
-
-      <h2 class="modal-title">Проверка на трезвость</h2>
-
-      <div class="quiz-stakes-bar">
-        <span style="color: #34d399;">Верно: +$5</span>
-        <span style="color: #3f3f46;">|</span>
-        <span style="color: #f87171;">Ошибка: -$10</span>
+      <div id="diamondModeDesc" style="font-size: 12px; color: #a1a1aa; text-align: center;">
+        Выбери цвет сектора: 🔴 47.5% • ⚫ 47.5% • 🟢 5%
       </div>
+      <div class="wheel-wrapper">
+        <div class="wheel-pointer"></div>
+        <div id="diamondWheelDisc"></div>
+        <div class="wheel-center-cap">💎</div>
+      </div>
+      <div id="diamondResultText" style="text-align: center; font-size: 13px; font-weight: 800; min-height: 20px;"></div>
+      <div class="color-bet-grid">
+        <button type="button" class="color-choice-btn red" data-color="red">
+          <span>🔴 Красный</span>
+          <span id="redPayoutLabel" style="font-size: 11px; color: #fca5a5;">+$500</span>
+        </button>
+        <button type="button" class="color-choice-btn black" data-color="black">
+          <span>⚫ Чёрный</span>
+          <span id="blackPayoutLabel" style="font-size: 11px; color: #d4d4d8;">+$500</span>
+        </button>
+        <button type="button" class="color-choice-btn green" data-color="green">
+          <span>🟢 Зелёный</span>
+          <span id="greenPayoutLabel" style="font-size: 11px; color: #6ee7b7;">+$1000</span>
+        </button>
+      </div>
+    </div>
+  </div>
 
-      <div id="quizQuestionText" class="quiz-question-box"></div>
-      <div id="quizOptionsList" class="quiz-options"></div>
-      <div id="quizFeedbackText" class="quiz-feedback hidden"></div>
+  <!-- Модалка: Достижения -->
+  <div id="achievementsModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="achModalTitle">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div id="achModalTitle" class="modal-title">🏆 Достижения (<span id="achModalCount">0/8</span>)</div>
+        <button id="closeAchievementsBtn" type="button" class="modal-close-btn" aria-label="Закрыть">✕</button>
+      </div>
+      <div id="achievementsList" class="ach-list"></div>
+      <button id="resetProgressBtn" type="button" class="reset-progress-btn">🔄 Сбросить весь прогресс</button>
+    </div>
+  </div>
+
+  <!-- Модалка: Проверка на трезвость (Игровая викторина) -->
+  <div id="captchaModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="captchaTitle">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div id="captchaTitle" class="modal-title">🧠 Проверка на трезвость</div>
+      </div>
+      <div class="quiz-meta">
+        <span>Тема: Видеоигры</span>
+        <span id="quizCounter">Вопрос 1/50 • +$5 / -$10</span>
+      </div>
+      <div id="quizQuestionText" class="quiz-question"></div>
+      <div id="quizOptionsContainer" class="quiz-options"></div>
+      <div id="quizFeedback"></div>
+    </div>
+  </div>
+
+  <!-- Модалка: Бросок монеты в Риск-игре -->
+  <div id="coinModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal-card" style="text-align: center;">
+      <div class="modal-title">🎲 Риск-игра 50/50</div>
+      <div id="coinStage" class="coin-stage coin-flipping">🪙</div>
+      <div id="coinResultText" style="font-size: 14px; font-weight: 800; color: #fbbf24;">Подбрасываем монету...</div>
+    </div>
+  </div>
+
+  <!-- Модалка: Карточка игрока для отправки (PNG) -->
+  <div id="shareModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="shareModalTitle">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div id="shareModalTitle" class="modal-title">📸 Карточка игрока</div>
+        <button id="closeShareModalBtn" type="button" class="modal-close-btn" aria-label="Закрыть">✕</button>
+      </div>
+      <div class="share-preview-frame">
+        <img id="sharePreviewImg" alt="Карточка рекорда Эмодзи-Слоты" />
+      </div>
+      <div class="share-actions-stack">
+        <button id="shareNativeImgBtn" type="button" class="share-action-btn primary">📲 Отправить картинку</button>
+        <div class="share-secondary-row">
+          <button id="downloadPngBtn" type="button" class="share-action-btn">💾 Скачать PNG</button>
+          <button id="copyTextCheckBtn" type="button" class="share-action-btn">📋 Копировать текст</button>
+        </div>
+      </div>
     </div>
   </div>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      // Строгий базовый набор из 10 эмодзи
-      const EMOJIS = ['🍒', '🍋', '🍇', '🍉', '🔔', '💎', '7️⃣', '🍀', '🔥', '👑'];
+      // --- Базовые константы и данные ---
+      const STORAGE_KEY = 'emoji_casino_save_v2';
+      const EMOJI_POOL = ['🍒', '🍋', '🍇', '🍉', '🔔', '💎', '7️⃣', '🍀', '👑', '🚀'];
 
-      // 9 секторов рулетки "Додеп" (сумма процентов = 100%)
+      // 9 вариантов Додепа (сумма шансов ровно 100%)
       const DODEP_ITEMS = [
-        { title: 'Продать хату', chance: 1, reward: 5000, icon: '🏠', rarity: 'gold' },
-        { title: 'Победа в лотерее', chance: 1, reward: 2500, icon: '🎟️', rarity: 'gold' },
-        { title: 'Хорошее наследство', chance: 5, reward: 600, icon: '📜', rarity: 'purple' },
-        { title: 'З/П с премией', chance: 7, reward: 250, icon: '💼', rarity: 'blue' },
-        { title: 'Сдал в ломбард бабкины зубы', chance: 10, reward: 120, icon: '🦷', rarity: 'blue' },
-        { title: '13-ая З/П', chance: 15, reward: 75, icon: '📅', rarity: 'green' },
-        { title: 'З/П', chance: 20, reward: 40, icon: '💵', rarity: 'common' },
-        { title: 'Саня вернул долг', chance: 16, reward: 20, icon: '🤝', rarity: 'common' },
-        { title: 'Мелочь в зимней куртке', chance: 25, reward: 10, icon: '🧥', rarity: 'common' }
+        { id: 'house', name: 'Продать хату', chance: 1, reward: 5000, emoji: '🏚️', rarity: 'rarity-legendary' },
+        { id: 'lottery', name: 'Победа в лотерее', chance: 1, reward: 2500, emoji: '🎟️', rarity: 'rarity-legendary' },
+        { id: 'heritage', name: 'Хорошее наследство', chance: 5, reward: 600, emoji: '📜', rarity: 'rarity-epic' },
+        { id: 'bonus_salary', name: 'З/П с премией', chance: 7, reward: 250, emoji: '💼', rarity: 'rarity-epic' },
+        { id: 'grandma_teeth', name: 'Бабкины зубы в ломбард', chance: 10, reward: 120, emoji: '🦷', rarity: 'rarity-rare' },
+        { id: 'salary_13', name: '13-ая З/П', chance: 15, reward: 75, emoji: '💵', rarity: 'rarity-rare' },
+        { id: 'salary', name: 'З/П', chance: 20, reward: 40, emoji: '💳', rarity: '' },
+        { id: 'sanya_debt', name: 'Саня вернул долг', chance: 16, reward: 20, emoji: '🤝', rarity: '' },
+        { id: 'jacket_coins', name: 'Мелочь в зимней куртке', chance: 25, reward: 10, emoji: '🧥', rarity: '' }
       ];
 
-      // 50 уникальных вопросов только на тему "Игры"
-      const RAW_QUIZ = [
-        ['На что напрямую влияет высокий тикрейт сервера (128 Гц вместо 64 Гц) в Counter-Strike?', 'На частоту обновления мира сервером в секунду и точность регистрации попаданий', 'На максимальное разрешение текстур и качество теней', 'На скорость загрузки карты с SSD-диска', 'На объём видеопамяти моделей'],
-        ['Сколько длится стандартный таймер до взрыва установленной C4 в соревновательном режиме Counter-Strike?', '40 секунд', '30 секунд', '45 секунд', '60 секунд'],
-        ['Какой эффект оказывает ультимейт Chronosphere у Faceless Void в Dota 2?', 'Останавливает во времени всех существ и постройки в куполе, кроме самого Void и его юнитов', 'Наносит периодический урон, но не мешает врагам двигаться', 'Делает всех союзников внутри сферы неуязвимыми к магии', 'Мгновенно телепортирует всех героев на базу'],
-        ['Какой предмет в Dota 2 позволяет герою мгновенно возродиться на месте смерти с полным здоровьем и маной?', 'Aegis of the Immortal', 'Refresher Orb', 'Bloodstone', 'Cheese'],
-        ['Какие блоки нужны для призыва Иссушителя (Визера) в Minecraft?', '4 блока песка (или почвы) душ буквой «Т» и 3 черепа скелета-иссушителя сверху', '4 блока обсидиана и 1 звезда Незера в центре', '4 железных блока буквой «Т» и 1 вырезанная тыква сверху', '3 блока незерита и 4 черепа скелета'],
-        ['Сколько минимум блоков обсидиана требуется для постройки работающего портала в Незер в Minecraft (без углов)?', '10 блоков', '14 блоков', '8 блоков', '12 блоков'],
-        ['Кем является загадочный G-Man в серии игр Half-Life?', 'Межпространственным «нанимателем» с дипломатом, контролирующим судьбу Гордона Фримена', 'Главным инженером «Чёрной Мезы», создавшим костюм HEV', 'Лидером сопротивления в Сити-17 и отцом Аликс Вэнс', 'ИИ, управляющим цитаделью Альянса'],
-        ['Какое культовое оружие ближнего боя первым получает Гордон Фримен в серии Half-Life?', 'Красную монтировку (лом)', 'Разводной ключ', 'Пожарный топор', 'Электрическую дубинку'],
-        ['Какой искусственный интеллект управляет комплексом Aperture Science и испытывает героиню в Portal?', 'GLaDOS', 'SHODAN', 'Cortana', 'HAL 9000'],
-        ['Зачем ведьмак Геральт из Ривии носит за спиной два разных меча — стальной и серебряный?', 'Стальной — против людей и обычных зверей, серебряный — против чудовищ', 'Один меч основной, а второй — запасной на случай поломки', 'Серебряный — для парирования стрел, стальной — для пробития доспехов', 'Один меч для правой руки, второй — для парного боя'],
-        ['Как называется любимая карточная мини-игра в мире «Ведьмак 3: Дикая Охота»?', 'Гвинт', 'Тройная Триада', 'Караван', 'Очко'],
-        ['Как называется знаменитый драконий крик в Skyrim, отбрасывающий врагов мощной ударной волной?', 'Fus Ro Dah (Безжалостная сила)', 'Yol Toor Shul (Огненное дыхание)', 'Wuld Nah Kest (Стремительный рывок)', 'Lok Vah Koor (Чистое небо)'],
-        ['Какую фразу чаще всего произносят стражники в Skyrim, объясняя завершение карьеры искателя приключений?', '«Когда-то и меня вела дорога приключений, а потом мне прострелили колено»', '«Я слишком стар для драконов, мне хватает и охраны ворот»', '«Мой меч затупился в пещерах двемеров, и я ушёл на покой»', '«После встречи с великаном я предпочитаю тихую службу»'],
-        ['Сколько главных играбельных персонажей доступно в сюжетной кампании GTA V?', 'Трое (Майкл, Франклин и Тревор)', 'Двое (Майкл и Франклин)', 'Четверо', 'Один'],
-        ['Как звали главного героя культовой GTA: San Andreas, вернувшегося на Гроув-стрит?', 'Карл «CJ» Джонсон', 'Томми Версетти', 'Нико Беллик', 'Клод'],
-        ['Какой рок-музыкант существует в виде энграммы в голове Ви в Cyberpunk 2077?', 'Джонни Сильверхенд', 'Керри Евродин', 'Адам Смэшер', 'Джеки Уэллс'],
-        ['Как называется мегаполис на побережье Калифорнии, где разворачиваются события Cyberpunk 2077?', 'Найт-Сити', 'Нью-Вегас', 'Лос-Сантос', 'Метрополис'],
-        ['Как называются точки отдыха и возрождения в мире Elden Ring (аналог костров из Dark Souls)?', 'Места благодати (Sites of Grace)', 'Фонари охотника', 'Идолы резчика', 'Алтари пепла'],
-        ['Как называется лечебная фляга, восстанавливающая здоровье главного героя в серии Dark Souls?', 'Фляга с эстусом', 'Багровые слёзы', 'Живая вода', 'Нектар пепла'],
-        ['Какой первый босс чаще всего встречается игроку на поверхности в начале прохождения Terraria?', 'Глаз Ктулху', 'Стена Плоти', 'Плантера', 'Лунный Лорд'],
-        ['Как называется легендарная двустволка Палача Рока в серии игр DOOM?', 'Супердробовик (Super Shotgun)', 'BFG-9000', 'Плазменная винтовка', 'Ракетомёт'],
-        ['Как называется мегакорпорация в серии Resident Evil, создавшая Т-вирус в Раккун-Сити?', 'Umbrella', 'Weyland-Yutani', 'Abstergo', 'Vault-Tec'],
-        ['Кто является главным протагонистом основной сюжетной линии Red Dead Redemption 2?', 'Артур Морган', 'Джон Марстон', 'Датч ван дер Линде', 'Мика Белл'],
-        ['Как в серии S.T.A.L.K.E.R. называют загадочный объект внутри Саркофага ЧАЭС, якобы исполняющий желания?', 'Монолит (Исполнитель желаний)', 'Выжигатель мозгов', 'О-Сознание', 'Сердце Оазиса'],
-        ['Что используется в качестве главной довоенной валюты в подземных станциях серии игр Metro (2033 / Last Light)?', 'Качественные армейские патроны калибра 5,45 мм', 'Крышки от бутылок', 'Железные жетоны', 'Фильтры для противогазов'],
-        ['Как зовут павшего принца Лордерона, ставшего Королём-личом во вселенной Warcraft?', 'Артас Менетил', 'Иллидан Ярость Бури', 'Тралл', 'Сильвана Ветрокрылая'],
-        ['Какой эпический монстр появляется в верхнем речном логове в League of Legends после 20-й минуты матча?', 'Барон Нашор', 'Рошан', 'Древний дракон', 'Герольд Бездны'],
-        ['Как называется взрывное устройство в Valorant, которое команда атаки устанавливает на пленте?', 'Spike (Спайк)', 'Defuser', 'Core', 'Beacon'],
-        ['Какую знаменитую фразу произносит Маккри (Кэссиди) из Overwatch при активации ультимейта Deadeye?', '«Ровно полдень» (It’s high noon)', '«Герои не умирают»', '«Правосудие обрушится с небес»', '«Умри, умри, умри!»'],
-        ['Сколько игроков входит в стандартный отряд в королевской битве Apex Legends?', '3 игрока', '4 игрока', '5 игроков', '2 игрока'],
-        ['Какой стартовый инструмент выдаётся каждому голому выжившему при первом появлении на острове в Rust?', 'Камень и факел', 'Деревянная кирка', 'Ржавый топор', 'Копьё'],
-        ['Как в Escape from Tarkov называются боты-мародёры и режим игры за них с бесплатным случайным снаряжением?', 'Дикие (Scavs)', 'Рейдеры', 'Отступники', 'Сектанты'],
-        ['Сколько уникальных игровых классов представлено в командном шутере Team Fortress 2?', '9 классов', '6 классов', '8 классов', '12 классов'],
-        ['Какого особого заражённого в Left 4 Dead лучше не тревожить светом фонарика, пока она сидит и плачет?', 'Ведьму (Witch)', 'Танка (Tank)', 'Охотника (Hunter)', 'Толстяка (Boomer)'],
-        ['Что служит основной валютой в пустошах постапокалиптической серии игр Fallout?', 'Крышки от бутылок «Ядер-Колы»', 'Довоенные доллары', 'Патроны 10-мм калибра', 'Золотые слитки'],
-        ['Как называется подводный город-антиутопия, в котором происходят события первой части BioShock?', 'Восторг (Rapture)', 'Колумбия', 'Сити-17', 'Аркадия'],
-        ['Как зовут сына Кратоса, с которым он отправляется развеять прах матери в God of War (2018)?', 'Атрей', 'Бальдр', 'Мимир', 'Деймос'],
-        ['Какой андроид-детектив из серии RK800 расследует дела о девиантах в Detroit: Become Human?', 'Коннор', 'Маркус', 'Кэра', 'Норт'],
-        ['Какой скелет из Undertale обожает каламбуры, носит синюю толстовку и считается самым сложным боссом Геноцида?', 'Санс (Sans)', 'Папирус (Papyrus)', 'Гастер', 'Андайн'],
-        ['Что нужно делать игроку в Five Nights at Freddy’s, чтобы пережить ночную смену с 12 до 6 утра?', 'Следить за аниматрониками по камерам и вовремя закрывать двери, экономя энергию', 'Отстреливаться от аниматроников из пистолета в коридоре', 'Бегать по пиццерии и собирать разбросанные ключи', 'Чинить игровые автоматы до рассвета'],
-        ['Как называется подземное королевство жуков, которое исследует герой в метроидвании Hollow Knight?', 'Халлоунест (Hallownest)', 'Фарлум', 'Диртмут', 'Глубинное гнездо'],
-        ['На какой океанической планете терпит крушение корабль «Аврора» в игре Subnautica?', 'Планета 4546B', 'Пандора', 'LV-426', 'Кеплер-22b'],
-        ['Какую главную задачу выполняют предатели (Impostors) на космическом корабле в Among Us?', 'Тайно устранять членов экипажа и устраивать саботажи, не раскрывая себя', 'Быстрее всех починить провода и заправить двигатели', 'Найти артефакт в реакторе за 3 минуты', 'Защищать корабль от метеоритного дождя'],
-        ['Сколько кристаллов нужно собрать и удержать в режиме «Захват кристаллов» в Brawl Stars для обратного отсчёта?', '10 кристаллов', '15 кристаллов', '5 кристаллов', '20 кристаллов'],
-        ['Сколько максимум единиц эликсира может накопиться в шкале игрока во время боя в Clash Royale?', '10 единиц', '8 единиц', '12 единиц', '15 единиц'],
-        ['Как зовут верную спутницу и проводницу Путешественника в мире Тейват в Genshin Impact?', 'Паймон', 'Люмин', 'Эмбер', 'Нахида'],
-        ['Что происходит с персонажем в Geometry Dash при малейшем столкновении с шипом или стеной?', 'Он мгновенно разбивается, и уровень начинается с самого начала (или с чекпоинта)', 'Он теряет одно из трёх сердечек здоровья', 'Он замедляется на 3 секунды и едет дальше', 'Он отскакивает назад на несколько метров'],
-        ['За счёт чего кумулятивные снаряды (HEAT) в War Thunder пробивают броню на любой дистанции?', 'За счёт сфокусированной кумулятивной струи при подрыве заряда, не зависящей от скорости снаряда', 'За счёт огромной кинетической энергии уранового сердечника', 'За счёт расплавления башни термитной смесью', 'За счёт рикошета от земли в днище'],
-        ['Сколько игроков сражается в каждой команде в стандартном случайном бою (15 на 15) в World of Tanks?', '15 игроков', '10 игроков', '12 игроков', '20 игроков'],
-        ['Какая классическая клавиша в играх отвечает за быстрое сохранение (Quick Save)?', 'F5', 'F9', 'F1', 'F12']
+      // 8 достижений с наградами
+      const ACHIEVEMENTS = [
+        {
+          id: 'first_blood',
+          icon: '🩸',
+          name: 'Первая кровь',
+          desc: 'Выбить свой первый джекпот х3',
+          rewardText: '+1 💎 Алмазный спин',
+          goldReward: 0,
+          diamondReward: 1
+        },
+        {
+          id: 'zero_balance',
+          icon: '🪦',
+          name: 'Полный ноль',
+          desc: 'Слить баланс ровно до $0',
+          rewardText: '+1 💎 Алмазный спин',
+          goldReward: 0,
+          diamondReward: 1
+        },
+        {
+          id: 'steel_nerves',
+          icon: '🧊',
+          name: 'Стальные нервы',
+          desc: 'Успешно удвоить куш в Риск-игре 50/50',
+          rewardText: '+1 🪙 Золотой спин',
+          goldReward: 1,
+          diamondReward: 0
+        },
+        {
+          id: 'heart_attack',
+          icon: '💔',
+          name: 'Инфаркт миокарда',
+          desc: '3 раза подряд поймать х2!, но проиграть на 3-м слоте',
+          rewardText: '+1 🪙 Золотой спин',
+          goldReward: 1,
+          diamondReward: 0
+        },
+        {
+          id: 'game_guru',
+          icon: '🎮',
+          name: 'Игровой гуру',
+          desc: 'Ответить на 5 вопросов викторины подряд без ошибок',
+          rewardText: '+1 🪙 Золотой спин',
+          goldReward: 1,
+          diamondReward: 0
+        },
+        {
+          id: 'homeless_rich',
+          icon: '🏚️',
+          name: 'Бездомный миллионер',
+          desc: 'Выбить «Продать хату» (+$5000) в Додепе',
+          rewardText: '+1 🪙 Золотой и +1 💎 Алмазный спин',
+          goldReward: 1,
+          diamondReward: 1
+        },
+        {
+          id: 'sniper',
+          icon: '🎯',
+          name: 'Снайпер',
+          desc: 'Сорвать джекпот на сложности N = 10 (шанс 1%)',
+          rewardText: '+2 🪙 Золотых спина',
+          goldReward: 2,
+          diamondReward: 0
+        },
+        {
+          id: 'oligarch',
+          icon: '👑',
+          name: 'Олигарх',
+          desc: 'Накопить на балансе $10,000 или больше',
+          rewardText: '+2 🪙 Золотых и +2 💎 Алмазных спина',
+          goldReward: 2,
+          diamondReward: 2
+        }
       ];
 
-      const QUIZ_BANK = RAW_QUIZ.map(([question, right, w1, w2, w3]) => ({
-        question,
-        options: [right, w1, w2, w3],
-        correct: 0
-      }));
+      // 20 мемных и псевдо-сократовских фраз победы
+      const WIN_PHRASES = [
+        '«Я знаю, что ничего не знаю, но +${win} в кармане» — Сократ',
+        'Сюда-а-а! +${win}! Чистый скилл, никакой удачи!',
+        'Опа, чирик! А точнее сразу +${win} на базу!',
+        '«Познай самого себя… как человека, поднявшего +${win}» — Сократ',
+        'На завод завтра можно не идти: +${win} в банке!',
+        'Математика — продажная девка, но сегодня она занесла +${win}!',
+        'Изи катка, мама, я в телевизоре! Выигрыш: +${win}!',
+        '«Истина рождается в споре, а +${win} — в трёх одинаковых эмодзи» — Сократ',
+        'Алгоритм сломался от твоей харизмы! Лови +${win}!',
+        'Сюда лут! +${win} залетают без регистрации и СМС!',
+        '«Богат не тот, у кого много, а тот, кто занёс +${win}» — Сократ',
+        'Габен лично подкрутил этот спин на +${win}!',
+        'Просто зашёл, просто нажал, просто забрал +${win}. База.',
+        '«Дай мне точку опоры и +${win}, и я переверну этот казик» — Архимед',
+        'Это не везение, это многоходовочка на +${win}!',
+        'Шок-контент! Барабаны выдали +${win} без смс!',
+        '«Лишь в одном я уверен: +${win} греют душу лучше философии» — Сократ',
+        'Легендарный занос! Плюс $${win} в копилку олигарха!',
+        'Кнопка «Бабло» найдена! Начислено +${win}!',
+        '«Жизнь без заноса на +${win} не стоит того, чтобы её жить» — Сократ'
+      ];
 
-      // DOM-ссылки
-      const appContainer = document.getElementById('appContainer');
+      // 20 мемных и псевдо-сократовских фраз поражения
+      const LOSS_PHRASES = [
+        '«Познай самого себя… и свой пустой кошелёк» — Сократ',
+        'Не повезло, не фартануло — пацан к успеху шёл...',
+        'Это не слив, это тактическое отступление в минус.',
+        '«Я знаю только то, что я ничего не выиграл» — Сократ',
+        'Гравитация — бессердечная ты сука. Мимо!',
+        'Барабаны сказали «нет», но душа требует отыграться.',
+        '«Мудрец не плачет по ставке, мудрец крутит ещё раз» — Сократ',
+        'Ну почти! Буквально на полмиллиметра мимо джекпота.',
+        'Казино всегда в плюсе, а мы тут ради искусства.',
+        '«Сложнее всего победить самого себя и 3-й барабан» — Сократ',
+        'Скрипт задушил, надо срочно поменять тактику!',
+        'Минус банк, плюс бесценный жизненный опыт.',
+        '«Ничто не вечно под луной, особенно стартовый депозит» — Сократ',
+        'Потрачено. Но мы ещё вернёмся за своим!',
+        'Этот спин был пристрелочным, следующий точно зайдёт!',
+        '«Истинная свобода — это когда на балансе ноль» — Сократ',
+        'Удача отошла попить чаю, скоро вернётся.',
+        'Где-то в параллельной вселенной тут выпало х3...',
+        '«Не ставка красит человека, а умение нажать Додеп» — Сократ',
+        'Обидно, досадно, но ладно — крутим дальше!'
+      ];
+
+      // 50 уникальных вопросов по видеоиграм для проверки на трезвость
+      const GAME_QUIZ_BANK = [
+        { q: 'Сколько стоит стандартная винтовка AK-47 в Counter-Strike (CS2 / CS:GO)?', opts: ['$2700', '$2900', '$3100', '$2500'], a: 0 },
+        { q: 'Как зовут главного героя серии игр «Ведьмак» (The Witcher)?', opts: ['Геральт из Ривии', 'Весемир', 'Ламберт', 'Эскель'], a: 0 },
+        { q: 'Сколько обсидиана минимум нужно для постройки рамки портала в Нижний мир в Minecraft?', opts: ['10 блоков', '12 блоков', '14 блоков', '8 блоков'], a: 0 },
+        { q: 'Какой предмет в Dota 2 даёт 10 секунд невосприимчивости к эффектам (сокращённо BKB)?', opts: ['Black King Bar', 'Blade Mail', 'Butterfly', 'Bloodthorn'], a: 0 },
+        { q: 'Как называется вымышленный город, в котором происходит действие Cyberpunk 2077?', opts: ['Найт-Сити', 'Лос-Сантос', 'Либерти-Сити', 'Вайс-Сити'], a: 0 },
+        { q: 'Как зовут молчаливого главного героя серии игр Half-Life?', opts: ['Гордон Фримен', 'Айзек Кларк', 'Алекс Вэнс', 'Барни Калхун'], a: 0 },
+        { q: 'Какой крик (Ту’ум) является самым знаменитым у Довакина в Skyrim?', opts: ['Fus Ro Dah', 'Wuld Nah Kest', 'Yol Toor Shul', 'Od Ah Viing'], a: 0 },
+        { q: 'Как зовут главного афроамериканского героя GTA: San Andreas?', opts: ['Карл «CJ» Джонсон', 'Франклин Клинтон', 'Нико Беллик', 'Томми Версетти'], a: 0 },
+        { q: 'Какой враг в Minecraft бесшумно подходит со спины и взрывается?', opts: ['Крипер', 'Эндермен', 'Фантом', 'Гаст'], a: 0 },
+        { q: 'Какой ИИ управляет комплексом Aperture Science в игре Portal?', opts: ['GLaDOS', 'SHODAN', 'Cortana', 'HAL 9000'], a: 0 },
+        { q: 'Какое прозвище носит главный герой игры S.T.A.L.K.E.R.: Тень Чернобыля?', opts: ['Меченый', 'Шрам', 'Дегтярёв', 'Стрелок-младший'], a: 0 },
+        { q: 'Сколько максимум игроков высаживается в классическом матче PUBG: Battlegrounds?', opts: ['100', '60', '150', '80'], a: 0 },
+        { q: 'Как зовут знаменитого наёмного убийцу со штрихкодом на затылке?', opts: ['Агент 47', 'Сэм Фишер', 'Макс Пэйн', 'Солид Снейк'], a: 0 },
+        { q: 'Какая студия разработала Dark Souls, Bloodborne и Elden Ring?', opts: ['FromSoftware', 'CD Projekt RED', 'Capcom', 'Naughty Dog'], a: 0 },
+        { q: 'Какое время таймера бомбы C4 в соревновательном режиме CS2?', opts: ['40 секунд', '35 секунд', '45 секунд', '30 секунд'], a: 0 },
+        { q: 'Как зовут главного босса в Рошановой яме в Dota 2?', opts: ['Рошан', 'Торментор', 'Древний', 'Аегис'], a: 0 },
+        { q: 'Из какого материала делается самая прочная броня и инструменты в современном Minecraft?', opts: ['Незерит', 'Алмаз', 'Изумруд', 'Обсидиан'], a: 0 },
+        { q: 'Как зовут приёмную дочь Геральта с пепельными волосами в The Witcher 3?', opts: ['Цири', 'Йеннифэр', 'Трисс', 'Кейра'], a: 0 },
+        { q: 'Сколько главных играбельных персонажей в сюжетном режиме GTA V?', opts: ['3', '2', '4', '1'], a: 0 },
+        { q: 'Какой рокер-террорист живёт в голове у Ви в Cyberpunk 2077?', opts: ['Джонни Сильверхенд', 'Керри Евродин', 'Адам Смэшер', 'Джеки Уэллс'], a: 0 },
+        { q: 'Как зовут спартанца, главного героя серии игр God of War?', opts: ['Кратос', 'Атрей', 'Зевс', 'Арес'], a: 0 },
+        { q: 'Какой артефакт в S.T.A.L.K.E.R. чаще всего ищут новички в начале игры и он выводит радиацию?', opts: ['Медуза', 'Компас', 'Сердце Оазиса', 'Золотая рыбка'], a: 0 },
+        { q: 'Какая карта в Counter-Strike знаменита «ямой», «длинным» и плентом A на песке?', opts: ['Dust 2', 'Mirage', 'Inferno', 'Nuke'], a: 0 },
+        { q: 'Какой предмет в Dota 2 позволяет мгновенно телепортироваться на короткую дистанцию (если не получал урон)?', opts: ['Blink Dagger', 'Force Staff', 'Shadow Blade', 'Eul’s Scepter'], a: 0 },
+        { q: 'Какое измерение в Minecraft населено эндерменами и Драконом Края?', opts: ['Энд (Край)', 'Незер (Нижний мир)', 'Сумеречный лес', 'Эфир'], a: 0 },
+        { q: 'Как зовут главного героя Red Dead Redemption 2?', opts: ['Артур Морган', 'Джон Марстон', 'Датч ван дер Линде', 'Мика Белл'], a: 0 },
+        { q: 'В какой игре нужно строить фабрику, конвейеры и запускать ракету на чужой планете?', opts: ['Factorio', 'Terraria', 'Subnautica', 'Rust'], a: 0 },
+        { q: 'Как зовут брата Марио в зелёной кепке?', opts: ['Луиджи', 'Варио', 'Валуиджи', 'Йоши'], a: 0 },
+        { q: 'Какая валюта используется для молитв (гачи) в Genshin Impact?', opts: ['Камни Истока (Примогемы)', 'Мора', 'Кристаллы Сотворения', 'Звёздный блеск'], a: 0 },
+        { q: 'В какой игре выживания игроки начинают голыми на острове с камнем и факелом?', opts: ['Rust', 'DayZ', 'The Forest', 'Valheim'], a: 0 },
+        { q: 'Как называется знаменитая снайперская винтовка в CS за $4750, убивающая с одного выстрела в тело?', opts: ['AWP', 'SSG 08', 'SCAR-20', 'G3SG1'], a: 0 },
+        { q: 'Сколько игроков в одной команде в стандартном матче Dota 2?', opts: ['5', '6', '4', '3'], a: 0 },
+        { q: 'Какой моб в Minecraft боится кошек и оцелотов?', opts: ['Крипер', 'Зомби', 'Скелет', 'Паук'], a: 0 },
+        { q: 'Как зовут инженера, сражающегося с некроморфами на корабле «Ишимура» в Dead Space?', opts: ['Айзек Кларк', 'Гордон Фримен', 'Маркус Феникс', 'Мастер Чиф'], a: 0 },
+        { q: 'В какой игре нужно искать предателей на космическом корабле и голосовать на собраниях?', opts: ['Among Us', 'Lethal Company', 'Phasmophobia', 'Fall Guys'], a: 0 },
+        { q: 'Какой босс из Elden Ring говорит: «Я — Маления, Клинок Микеллы»?', opts: ['Маления', 'Радан', 'Годфри', 'Морготт'], a: 0 },
+        { q: 'Как называется культовая карточная мини-игра внутри «Ведьмак 3»?', opts: ['Гвинт', 'Хартстоун', 'Дурак', 'Блэкджек'], a: 0 },
+        { q: 'В какой игре нужно собирать металлолом на опасных лунах, чтобы выполнить квоту Компании?', opts: ['Lethal Company', 'Content Warning', 'Deep Rock Galactic', 'No Man’s Sky'], a: 0 },
+        { q: 'Какой инструмент в Half-Life стал главным символом Гордона Фримена?', opts: ['Монтировка (лом)', 'Разводной ключ', 'Бензопила', 'Топор'], a: 0 },
+        { q: 'Какой цвет у сапог в Dota 2, которые дают прирост к скорости и характеристикам и собираются из Boots of Speed?', opts: ['Power Treads', 'Phase Boots', 'Arcane Boots', 'Tranquil Boots'], a: 0 },
+        { q: 'Сколько очков здоровья (сердечек) у игрока в Minecraft без эффектов и брони?', opts: ['10 сердец (20 HP)', '12 сердец (24 HP)', '8 сердец (16 HP)', '20 сердец (40 HP)'], a: 0 },
+        { q: 'Как зовут главного героя серии Metro («Метро 2033»)?', opts: ['Артём', 'Мельник', 'Хан', 'Бурбон'], a: 0 },
+        { q: 'В какой игре действие происходит в подводном городе Восторг (Rapture)?', opts: ['BioShock', 'Subnautica', 'Dishonored', 'Prey'], a: 0 },
+        { q: 'Какая студия создала серию игр Half-Life, Portal и Counter-Strike?', opts: ['Valve', 'Blizzard', 'Ubisoft', 'Bethesda'], a: 0 },
+        { q: 'Какой персонаж в Brawl Stars стреляет из лопаты и является мифическим бойцом?', opts: ['Мортис', 'Эль Примо', 'Шелли', 'Спайк'], a: 0 },
+        { q: 'В какой игре нужно определять тип призрака с помощью ЭМП, термометра и радиоприёмника?', opts: ['Phasmophobia', 'Outlast', 'Silent Hill', 'Resident Evil'], a: 0 },
+        { q: 'Как называется пустынная карта в CS2 с дворцом, ковром и окном на миду?', opts: ['Mirage', 'Anubis', 'Ancient', 'Overpass'], a: 0 },
+        { q: 'Какой зелёный огородный моб в Minecraft взрывается, но не ломает блоки в воде?', opts: ['Крипер', 'Слайм', 'Зомби-житель', 'Болотник'], a: 0 },
+        { q: 'Как зовут главного героя серии игр Max Payne?', opts: ['Макс Пэйн', 'Алан Уэйк', 'Джек Карвер', 'Алекс Мейсон'], a: 0 },
+        { q: 'Какой режим в Dota 2 позволяет выбирать из всех героев без ограничений?', opts: ['All Pick', 'Single Draft', 'Ability Draft', 'Captains Mode'], a: 0 }
+      ];
+
+      // --- DOM элементы ---
       const balanceValue = document.getElementById('balanceValue');
-      const balanceDelta = document.getElementById('balanceDelta');
+      const fastSkipBtn = document.getElementById('fastSkipBtn');
       const soundToggleBtn = document.getElementById('soundToggleBtn');
-      const betPills = document.querySelectorAll('.bet-pill');
+      const achievementsBtn = document.getElementById('achievementsBtn');
+      const betPills = Array.from(document.querySelectorAll('.bet-pill'));
       const customBetInput = document.getElementById('customBetInput');
-      const nSlider = document.getElementById('nSlider');
       const nDisplay = document.getElementById('nDisplay');
       const payoutBadge = document.getElementById('payoutBadge');
-      const activeEmojisRow = document.getElementById('activeEmojisRow');
-      const chanceBadge = document.getElementById('chanceBadge');
+      const nSlider = document.getElementById('nSlider');
+      const activeEmojisPreview = document.getElementById('activeEmojisPreview');
+      const winChanceText = document.getElementById('winChanceText');
       const reelBoxes = [
         document.getElementById('reelBox0'),
         document.getElementById('reelBox1'),
         document.getElementById('reelBox2')
       ];
       const reelSymbols = [
-        document.getElementById('reelSymbol0'),
-        document.getElementById('reelSymbol1'),
-        document.getElementById('reelSymbol2')
+        document.getElementById('reelSym0'),
+        document.getElementById('reelSym1'),
+        document.getElementById('reelSym2')
       ];
       const spinBtn = document.getElementById('spinBtn');
+      const riskPanel = document.getElementById('riskPanel');
+      const collectWinBtn = document.getElementById('collectWinBtn');
+      const doubleRiskBtn = document.getElementById('doubleRiskBtn');
       const dodepBtn = document.getElementById('dodepBtn');
-      const fastSkipBtn = document.getElementById('fastSkipBtn');
+      const goldSpinBtn = document.getElementById('goldSpinBtn');
+      const diamondSpinBtn = document.getElementById('diamondSpinBtn');
+      const sessionStatsRow = document.getElementById('sessionStatsRow');
+      const shareBtn = document.getElementById('shareBtn');
       const statusBanner = document.getElementById('statusBanner');
       const suspenseVignette = document.getElementById('suspenseVignette');
       const comboSplashText = document.getElementById('comboSplashText');
 
+      // Модалки и их элементы
+      const achievementToast = document.getElementById('achievementToast');
+      const toastIcon = document.getElementById('toastIcon');
+      const toastTitle = document.getElementById('toastTitle');
+      const toastReward = document.getElementById('toastReward');
+
       const dodepModal = document.getElementById('dodepModal');
       const closeDodepBtn = document.getElementById('closeDodepBtn');
-      const rouletteViewport = document.getElementById('rouletteViewport');
-      const rouletteTrack = document.getElementById('rouletteTrack');
-      const rouletteResultBox = document.getElementById('rouletteResultBox');
-      const rouletteResultTitle = document.getElementById('rouletteResultTitle');
-      const rouletteResultAmount = document.getElementById('rouletteResultAmount');
-      const rouletteOddsLegend = document.getElementById('rouletteOddsLegend');
-      const spinRouletteBtn = document.getElementById('spinRouletteBtn');
+      const caseStrip = document.getElementById('caseStrip');
+      const dodepResultText = document.getElementById('dodepResultText');
+      const dodepOddsGrid = document.getElementById('dodepOddsGrid');
 
-      const sobrietyModal = document.getElementById('sobrietyModal');
-      const sobrietyBox = document.getElementById('sobrietyBox');
-      const quizCounterBadge = document.getElementById('quizCounterBadge');
+      const diamondModal = document.getElementById('diamondModal');
+      const closeDiamondBtn = document.getElementById('closeDiamondBtn');
+      const diamondModeDesc = document.getElementById('diamondModeDesc');
+      const diamondWheelDisc = document.getElementById('diamondWheelDisc');
+      const diamondResultText = document.getElementById('diamondResultText');
+      const colorChoiceBtns = Array.from(document.querySelectorAll('.color-choice-btn'));
+      const redPayoutLabel = document.getElementById('redPayoutLabel');
+      const blackPayoutLabel = document.getElementById('blackPayoutLabel');
+      const greenPayoutLabel = document.getElementById('greenPayoutLabel');
+
+      const achievementsModal = document.getElementById('achievementsModal');
+      const closeAchievementsBtn = document.getElementById('closeAchievementsBtn');
+      const achModalCount = document.getElementById('achModalCount');
+      const achievementsList = document.getElementById('achievementsList');
+      const resetProgressBtn = document.getElementById('resetProgressBtn');
+
+      const captchaModal = document.getElementById('captchaModal');
+      const quizCounter = document.getElementById('quizCounter');
       const quizQuestionText = document.getElementById('quizQuestionText');
-      const quizOptionsList = document.getElementById('quizOptionsList');
-      const quizFeedbackText = document.getElementById('quizFeedbackText');
+      const quizOptionsContainer = document.getElementById('quizOptionsContainer');
+      const quizFeedback = document.getElementById('quizFeedback');
 
-      // Состояние
+      const coinModal = document.getElementById('coinModal');
+      const coinStage = document.getElementById('coinStage');
+      const coinResultText = document.getElementById('coinResultText');
+
+      const shareModal = document.getElementById('shareModal');
+      const closeShareModalBtn = document.getElementById('closeShareModalBtn');
+      const sharePreviewImg = document.getElementById('sharePreviewImg');
+      const shareNativeImgBtn = document.getElementById('shareNativeImgBtn');
+      const downloadPngBtn = document.getElementById('downloadPngBtn');
+      const copyTextCheckBtn = document.getElementById('copyTextCheckBtn');
+
+      // --- Состояние игры ---
       let balance = 100;
-      let betMode = 10; // 5 | 10 | 25 | 'MAX' | 'CUSTOM'
+      let betMode = 10; // 5 | 10 | 25 | 'PCT_10' | 'PCT_25' | 'PCT_50' | 'MAX' | 'CUSTOM'
       let customBetAmount = 15;
       let emojiCount = 5;
       let fastSkipEnabled = false;
+      let soundEnabled = true;
+
+      let goldSpins = 0;
+      let diamondSpins = 0;
+      let pendingWin = 0;
+
       let isSpinning = false;
       let isRouletteSpinning = false;
+      let isDiamondSpinning = false;
       let isCaptchaActive = false;
+      let diamondSpinIsFreeTicket = false;
+      let diamondWheelRotation = 0;
 
-      let spinsUntilCaptcha = randomInt(5, 10);
-      let quizDeck = [];
-      let quizPointer = 0;
-      let isQuizValidating = false;
+      // Изолированные реестры таймеров и токенов для каждого из 3 слотов
+      const activeReelTimers = [[], [], []];
+      const activeReelTokens = [0, 0, 0];
 
       let dodepCooldownEnd = 0;
-      let dodepIntervalId = null;
-      let comboTimerId = null;
+      let dodepCooldownTimer = null;
 
-      // --- Безопасный Web Audio API ---
+      let peakBalance = 100;
+      let totalSpins = 0;
+      let totalJackpots = 0;
+      let housesSold = 0;
+      let nearMissStreak = 0;
+      let quizCorrectStreak = 0;
+      let spinsUntilCaptcha = getRandomInt(5, 10);
+
+      const unlockedAchievements = new Set();
+      const toastQueue = [];
+      let isToastShowing = false;
+      let resetConfirmTimer = null;
+
+      // Колоды без повторений для фраз и викторины
+      let winPhraseDeck = [];
+      let lossPhraseDeck = [];
+      let quizDeck = [];
+      let quizPointer = 0;
+
+      // Текущий сгенерированный PNG-чек
+      let lastGeneratedPngBlob = null;
+      let lastGeneratedPngUrl = null;
+
+      // --- Процедурный Web Audio API + Вибрация ---
       const SoundFX = (() => {
         let ctx = null;
-        let enabled = true;
-        let suspenseLoop = null;
+        let suspenseOsc = null;
+        let suspenseGain = null;
 
         function getCtx() {
-          if (!enabled) return null;
-          try {
+          if (!soundEnabled) return null;
+          if (!ctx) {
             const AudioCtx = window.AudioContext || window.webkitAudioContext;
-            if (!AudioCtx) return null;
-            if (!ctx) ctx = new AudioCtx();
-            if (ctx.state === 'suspended') ctx.resume();
-            return ctx;
-          } catch (_) {
-            return null;
+            if (AudioCtx) ctx = new AudioCtx();
           }
+          if (ctx && ctx.state === 'suspended') {
+            ctx.resume().catch(() => {});
+          }
+          return ctx;
         }
 
-        function tick(freq = 600, vol = 0.04) {
-          try {
-            const c = getCtx();
-            if (!c) return;
-            const now = c.currentTime;
-            const osc = c.createOscillator();
-            const gain = c.createGain();
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(freq, now);
-            osc.frequency.exponentialRampToValueAtTime(freq * 0.45, now + 0.03);
-            gain.gain.setValueAtTime(vol, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.035);
-            osc.connect(gain);
-            gain.connect(c.destination);
-            osc.start(now);
-            osc.stop(now + 0.04);
-          } catch (_) {}
+        function tick(freq = 520, duration = 0.035, vol = 0.06) {
+          const ac = getCtx();
+          if (!ac) return;
+          const now = ac.currentTime;
+          const osc = ac.createOscillator();
+          const gain = ac.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now);
+          gain.gain.setValueAtTime(vol, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+          osc.connect(gain);
+          gain.connect(ac.destination);
+          osc.start(now);
+          osc.stop(now + duration);
         }
 
-        function stopSound(reelIdx) {
-          try {
-            const c = getCtx();
-            if (!c) return;
-            const now = c.currentTime;
-            const freqs = [190, 260, 340];
-            const f = freqs[reelIdx] || 220;
-            const osc = c.createOscillator();
-            const gain = c.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(f, now);
-            osc.frequency.exponentialRampToValueAtTime(f * 0.45, now + 0.14);
-            gain.gain.setValueAtTime(0.2, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        function stopPop(comboLevel = 1) {
+          const ac = getCtx();
+          if (!ac) return;
+          const now = ac.currentTime;
+          const freqs = comboLevel === 1 ? [330, 440] : comboLevel === 2 ? [440, 587, 740] : [523, 659, 784, 1046];
+          freqs.forEach((f, i) => {
+            const osc = ac.createOscillator();
+            const gain = ac.createGain();
+            osc.type = comboLevel === 3 ? 'sawtooth' : 'sine';
+            osc.frequency.setValueAtTime(f, now + i * 0.055);
+            gain.gain.setValueAtTime(0.08, now + i * 0.055);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.055 + 0.25);
             osc.connect(gain);
-            gain.connect(c.destination);
-            osc.start(now);
-            osc.stop(now + 0.16);
-          } catch (_) {}
+            gain.connect(ac.destination);
+            osc.start(now + i * 0.055);
+            osc.stop(now + i * 0.055 + 0.26);
+          });
         }
 
         function startSuspense() {
+          const ac = getCtx();
+          if (!ac) return;
           stopSuspense();
-          try {
-            const c = getCtx();
-            if (!c) return;
-            const now = c.currentTime;
-            const osc = c.createOscillator();
-            const gain = c.createGain();
-            const filter = c.createBiquadFilter();
-
-            osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(52, now);
-            osc.frequency.linearRampToValueAtTime(98, now + 3.6);
-
-            filter.type = 'lowpass';
-            filter.frequency.setValueAtTime(170, now);
-            filter.frequency.linearRampToValueAtTime(420, now + 3.6);
-
-            gain.gain.setValueAtTime(0.02, now);
-            gain.gain.linearRampToValueAtTime(0.13, now + 3.4);
-
-            osc.connect(filter);
-            filter.connect(gain);
-            gain.connect(c.destination);
-            osc.start(now);
-
-            let interval = 420;
-            let timer = null;
-            let active = true;
-
-            const beat = () => {
-              if (!active) return;
-              try {
-                const t = c.currentTime;
-                const hb = c.createOscillator();
-                const hbGain = c.createGain();
-                hb.type = 'sine';
-                hb.frequency.setValueAtTime(85, t);
-                hb.frequency.exponentialRampToValueAtTime(34, t + 0.16);
-                hbGain.gain.setValueAtTime(0.22, t);
-                hbGain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
-                hb.connect(hbGain);
-                hbGain.connect(c.destination);
-                hb.start(t);
-                hb.stop(t + 0.19);
-              } catch (_) {}
-              interval = Math.max(150, interval * 0.87);
-              timer = setTimeout(beat, interval);
-            };
-
-            beat();
-            suspenseLoop = {
-              stop: () => {
-                active = false;
-                if (timer) clearTimeout(timer);
-                try {
-                  gain.gain.setTargetAtTime(0.0001, c.currentTime, 0.03);
-                  osc.stop(c.currentTime + 0.08);
-                } catch (_) {}
-              }
-            };
-          } catch (_) {}
+          const now = ac.currentTime;
+          suspenseOsc = ac.createOscillator();
+          suspenseGain = ac.createGain();
+          suspenseOsc.type = 'sawtooth';
+          suspenseOsc.frequency.setValueAtTime(95, now);
+          suspenseOsc.frequency.linearRampToValueAtTime(210, now + 3.8);
+          suspenseGain.gain.setValueAtTime(0.025, now);
+          suspenseGain.gain.linearRampToValueAtTime(0.06, now + 3.8);
+          suspenseOsc.connect(suspenseGain);
+          suspenseGain.connect(ac.destination);
+          suspenseOsc.start(now);
         }
 
         function stopSuspense() {
-          if (suspenseLoop) {
-            suspenseLoop.stop();
-            suspenseLoop = null;
+          if (suspenseOsc) {
+            try { suspenseOsc.stop(); } catch (_) {}
+            suspenseOsc.disconnect();
+            suspenseOsc = null;
+          }
+          if (suspenseGain) {
+            suspenseGain.disconnect();
+            suspenseGain = null;
           }
         }
 
-        function jackpot() {
-          stopSuspense();
-          try {
-            const c = getCtx();
-            if (!c) return;
-            const now = c.currentTime;
-            [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
-              const osc = c.createOscillator();
-              const gain = c.createGain();
-              osc.type = 'triangle';
-              osc.frequency.setValueAtTime(f, now + i * 0.055);
-              gain.gain.setValueAtTime(0.15, now + i * 0.055);
-              gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.055 + 0.65);
-              osc.connect(gain);
-              gain.connect(c.destination);
-              osc.start(now + i * 0.055);
-              osc.stop(now + i * 0.055 + 0.68);
-            });
-          } catch (_) {}
-        }
-
         function miss() {
-          stopSuspense();
-          try {
-            const c = getCtx();
-            if (!c) return;
-            const now = c.currentTime;
-            const osc = c.createOscillator();
-            const gain = c.createGain();
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(145, now);
-            osc.frequency.exponentialRampToValueAtTime(48, now + 0.3);
-            gain.gain.setValueAtTime(0.2, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
-            osc.connect(gain);
-            gain.connect(c.destination);
-            osc.start(now);
-            osc.stop(now + 0.34);
-          } catch (_) {}
+          const ac = getCtx();
+          if (!ac) return;
+          const now = ac.currentTime;
+          const osc = ac.createOscillator();
+          const gain = ac.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(220, now);
+          osc.frequency.exponentialRampToValueAtTime(95, now + 0.28);
+          gain.gain.setValueAtTime(0.07, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+          osc.connect(gain);
+          gain.connect(ac.destination);
+          osc.start(now);
+          osc.stop(now + 0.31);
         }
 
         function toggle() {
-          enabled = !enabled;
-          if (!enabled) stopSuspense();
+          soundEnabled = !soundEnabled;
+          if (!soundEnabled) stopSuspense();
           else getCtx();
-          return enabled;
+          saveProgress();
+          return soundEnabled;
         }
 
-        return { getCtx, tick, stopSound, startSuspense, stopSuspense, jackpot, miss, toggle };
+        return { getCtx, tick, stopPop, startSuspense, stopSuspense, miss, toggle };
       })();
 
-      // --- Базовые утилиты ---
-      function randomInt(min, max) {
+      function vibrate(pattern) {
+        try {
+          if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+            navigator.vibrate(pattern);
+          }
+        } catch (_) {}
+      }
+
+      // --- Вспомогательные функции ---
+      function getRandomInt(min, max) {
         return Math.floor(Math.random() * (max - min + 1)) + min;
       }
 
       function sleep(ms) {
-        return new Promise((resolve) => setTimeout(resolve, Math.max(0, ms)));
+        return new Promise(resolve => setTimeout(resolve, ms));
+      }
+
+      function shuffleArray(arr) {
+        const copy = arr.slice();
+        for (let i = copy.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [copy[i], copy[j]] = [copy[j], copy[i]];
+        }
+        return copy;
       }
 
       function getActivePool() {
-        const n = Math.max(2, Math.min(EMOJIS.length, Number(emojiCount) || 5));
-        return EMOJIS.slice(0, n);
+        return EMOJI_POOL.slice(0, emojiCount);
       }
 
       function getMultiplier() {
-        const n = Math.max(2, Math.min(EMOJIS.length, Number(emojiCount) || 5));
-        return n * n;
+        return emojiCount * emojiCount;
       }
 
+      function nextWinPhrase(winAmount) {
+        if (winPhraseDeck.length === 0) {
+          winPhraseDeck = shuffleArray(WIN_PHRASES);
+        }
+        const raw = winPhraseDeck.pop();
+        return raw.replace(/\$\{win\}/g, `$${winAmount}`);
+      }
+
+      function nextLossPhrase() {
+        if (lossPhraseDeck.length === 0) {
+          lossPhraseDeck = shuffleArray(LOSS_PHRASES);
+        }
+        return lossPhraseDeck.pop();
+      }
+
+      function showStatus(text, type = 'info') {
+        statusBanner.textContent = text;
+        statusBanner.className = `visible ${type}`;
+      }
+
+      function hideStatus() {
+        statusBanner.className = '';
+      }
+
+      function triggerComboSplash(level) {
+        comboSplashText.className = '';
+        void comboSplashText.offsetWidth;
+        if (level === 1) {
+          comboSplashText.textContent = 'х1';
+          comboSplashText.className = 'splash-x1';
+        } else if (level === 2) {
+          comboSplashText.textContent = 'х2!';
+          comboSplashText.className = 'splash-x2';
+        } else if (level === 3) {
+          comboSplashText.textContent = 'х3!!!!';
+          comboSplashText.className = 'splash-x3';
+        }
+      }
+
+      // --- Сохранение / Загрузка прогресса ---
+      function saveProgress() {
+        try {
+          const payload = {
+            balance,
+            peakBalance,
+            totalSpins,
+            totalJackpots,
+            housesSold,
+            goldSpins,
+            diamondSpins,
+            fastSkipEnabled,
+            soundEnabled,
+            emojiCount,
+            unlockedAchievements: Array.from(unlockedAchievements)
+          };
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+        } catch (_) {}
+      }
+
+      function loadProgress() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return;
+          const data = JSON.parse(raw);
+          if (!data || typeof data !== 'object') return;
+
+          if (Number.isFinite(data.balance) && data.balance >= 0) balance = Math.floor(data.balance);
+          if (Number.isFinite(data.peakBalance) && data.peakBalance >= balance) {
+            peakBalance = Math.floor(data.peakBalance);
+          } else {
+            peakBalance = Math.max(100, balance);
+          }
+
+          if (Number.isFinite(data.totalSpins) && data.totalSpins >= 0) totalSpins = Math.floor(data.totalSpins);
+          if (Number.isFinite(data.totalJackpots) && data.totalJackpots >= 0) totalJackpots = Math.floor(data.totalJackpots);
+          if (Number.isFinite(data.housesSold) && data.housesSold >= 0) housesSold = Math.floor(data.housesSold);
+          if (Number.isFinite(data.goldSpins) && data.goldSpins >= 0) goldSpins = Math.floor(data.goldSpins);
+          if (Number.isFinite(data.diamondSpins) && data.diamondSpins >= 0) diamondSpins = Math.floor(data.diamondSpins);
+
+          if (Number.isFinite(data.emojiCount) && data.emojiCount >= 2 && data.emojiCount <= 10) {
+            emojiCount = Math.floor(data.emojiCount);
+            nSlider.value = String(emojiCount);
+          }
+
+          if (typeof data.fastSkipEnabled === 'boolean') fastSkipEnabled = data.fastSkipEnabled;
+          if (typeof data.soundEnabled === 'boolean') {
+            soundEnabled = data.soundEnabled;
+            soundToggleBtn.textContent = soundEnabled ? '🔊' : '🔇';
+          }
+
+          if (Array.isArray(data.unlockedAchievements)) {
+            data.unlockedAchievements.forEach(id => {
+              if (ACHIEVEMENTS.some(a => a.id === id)) {
+                unlockedAchievements.add(id);
+              }
+            });
+          }
+
+          if (balance >= 500 && typeof betMode === 'number') {
+            betMode = 'PCT_10';
+          }
+        } catch (_) {}
+      }
+
+      function resetAllProgress() {
+        try {
+          localStorage.removeItem(STORAGE_KEY);
+        } catch (_) {}
+
+        balance = 100;
+        peakBalance = 100;
+        totalSpins = 0;
+        totalJackpots = 0;
+        housesSold = 0;
+        goldSpins = 0;
+        diamondSpins = 0;
+        nearMissStreak = 0;
+        quizCorrectStreak = 0;
+        pendingWin = 0;
+        betMode = 10;
+        emojiCount = 5;
+        nSlider.value = '5';
+        unlockedAchievements.clear();
+
+        const pool = getActivePool();
+        reelBoxes.forEach(box => box.classList.remove('win', 'suspense', 'gold-spin'));
+        reelSymbols.forEach((sym, idx) => {
+          sym.textContent = pool[idx % pool.length];
+        });
+
+        saveProgress();
+        achievementsModal.classList.add('hidden');
+        showStatus('Прогресс сброшен! Стартовый банк: $100', 'info');
+        updateUI();
+      }
+
+      // --- Система достижений ---
+      function unlockAchievement(id) {
+        if (unlockedAchievements.has(id)) return;
+        const ach = ACHIEVEMENTS.find(a => a.id === id);
+        if (!ach) return;
+
+        unlockedAchievements.add(id);
+        goldSpins += ach.goldReward;
+        diamondSpins += ach.diamondReward;
+
+        saveProgress();
+        toastQueue.push(ach);
+        processToastQueue();
+        updateUI();
+      }
+
+      async function processToastQueue() {
+        if (isToastShowing || toastQueue.length === 0) return;
+        isToastShowing = true;
+        const ach = toastQueue.shift();
+
+        toastIcon.textContent = ach.icon;
+        toastTitle.textContent = ach.name;
+        toastReward.textContent = `Награда: ${ach.rewardText}`;
+        achievementToast.classList.add('show');
+        SoundFX.stopPop(3);
+        vibrate([30, 40, 60]);
+
+        await sleep(3200);
+        achievementToast.classList.remove('show');
+        await sleep(350);
+
+        isToastShowing = false;
+        processToastQueue();
+      }
+
+      function checkEconomyAchievements() {
+        if (balance > peakBalance) peakBalance = balance;
+        if (balance >= 10000) unlockAchievement('oligarch');
+        if (balance === 0 && pendingWin === 0 && !isSpinning) unlockAchievement('zero_balance');
+        saveProgress();
+      }
+
+      function openAchievementsModal() {
+        achModalCount.textContent = `${unlockedAchievements.size}/${ACHIEVEMENTS.length}`;
+        resetProgressBtn.classList.remove('confirming');
+        resetProgressBtn.textContent = '🔄 Сбросить весь прогресс';
+        if (resetConfirmTimer) {
+          clearTimeout(resetConfirmTimer);
+          resetConfirmTimer = null;
+        }
+
+        achievementsList.innerHTML = ACHIEVEMENTS.map(ach => {
+          const done = unlockedAchievements.has(ach.id);
+          return `
+            <div class="ach-card ${done ? 'unlocked' : ''}">
+              <div class="ach-icon">${done ? ach.icon : '🔒'}</div>
+              <div class="ach-info">
+                <div class="ach-name">${ach.name}</div>
+                <div class="ach-desc">${ach.desc}</div>
+                <div class="ach-reward-pill">${done ? '✅ Получено: ' : '🎁 Награда: '}${ach.rewardText}</div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        achievementsModal.classList.remove('hidden');
+      }
+
+      // --- Расчёт ставки ---
       function getBetAmount() {
+        const isHighRoller = balance >= 500;
         if (betMode === 'MAX') return balance > 0 ? balance : 5;
+        if (betMode === 'PCT_10') return isHighRoller ? Math.max(1, Math.floor(balance * 0.1)) : 5;
+        if (betMode === 'PCT_25') return isHighRoller ? Math.max(1, Math.floor(balance * 0.25)) : 10;
+        if (betMode === 'PCT_50') return isHighRoller ? Math.max(1, Math.floor(balance * 0.5)) : 25;
         if (betMode === 'CUSTOM') {
           const val = Math.floor(Number(customBetAmount));
           return Number.isFinite(val) && val >= 1 ? val : 0;
         }
+        if (isHighRoller && typeof betMode === 'number') {
+          if (betMode === 5) return Math.max(1, Math.floor(balance * 0.1));
+          if (betMode === 10) return Math.max(1, Math.floor(balance * 0.25));
+          if (betMode === 25) return Math.max(1, Math.floor(balance * 0.5));
+        }
         return betMode;
       }
 
-      function pickDifferentEmoji(pool, prevEmoji) {
-        if (pool.length <= 1) return pool[0];
-        let next = pool[Math.floor(Math.random() * pool.length)];
-        if (next === prevEmoji) {
-          const idx = pool.indexOf(prevEmoji);
-          next = pool[(idx + 1) % pool.length];
-        }
-        return next;
-      }
-
-      function formatChance(n) {
-        const pct = (1 / (n * n)) * 100;
-        return Number.isInteger(pct) ? `${pct}%` : `${pct.toFixed(1)}%`;
-      }
-
-      function flashDelta(amount) {
-        balanceDelta.textContent = amount >= 0 ? `+$${amount}` : `-$${Math.abs(amount)}`;
-        balanceDelta.className = `balance-delta ${amount >= 0 ? 'show-pos' : 'show-neg'}`;
-        setTimeout(() => {
-          balanceDelta.className = 'balance-delta';
-        }, 1200);
-      }
-
-      function showStatus(text, type = 'win') {
-        statusBanner.textContent = text;
-        statusBanner.className = `status-text ${type}`;
-      }
-
-      function hideStatus() {
-        statusBanner.className = 'status-text hidden';
-      }
-
-      function shakeScreen() {
-        appContainer.classList.remove('shake');
-        void appContainer.offsetWidth;
-        appContainer.classList.add('shake');
-      }
-
-      function setSuspense(active) {
-        if (active) {
-          suspenseVignette.classList.remove('hidden');
-          suspenseVignette.classList.add('active');
-          reelBoxes[2].classList.add('suspense');
-          SoundFX.startSuspense();
-        } else {
-          suspenseVignette.classList.add('hidden');
-          suspenseVignette.classList.remove('active');
-          reelBoxes[2].classList.remove('suspense');
-          SoundFX.stopSuspense();
-        }
-      }
-
-      function showComboSplash(stage) {
-        if (comboTimerId) clearTimeout(comboTimerId);
-        comboSplashText.className = 'combo-text';
-        void comboSplashText.offsetWidth;
-
-        if (stage === 1) {
-          comboSplashText.textContent = 'х1';
-          comboSplashText.style.color = '#4ade80';
-          comboSplashText.style.fontSize = 'clamp(5.5rem, 24vw, 9rem)';
-          comboSplashText.style.textShadow = '0 0 36px rgba(74, 222, 128, 0.85), 0 8px 24px rgba(0, 0, 0, 0.92)';
-          comboSplashText.classList.add('combo-anim');
-          comboTimerId = setTimeout(() => comboSplashText.classList.add('hidden'), 860);
-        } else if (stage === 2) {
-          comboSplashText.textContent = 'х2!';
-          comboSplashText.style.color = '#ef4444';
-          comboSplashText.style.fontSize = 'clamp(6.5rem, 28vw, 10.5rem)';
-          comboSplashText.style.textShadow = '0 0 46px rgba(239, 68, 68, 0.92), 0 10px 28px rgba(0, 0, 0, 0.96)';
-          comboSplashText.classList.add('combo-anim');
-          shakeScreen();
-          comboTimerId = setTimeout(() => comboSplashText.classList.add('hidden'), 860);
-        } else if (stage === 3) {
-          comboSplashText.textContent = 'х3!!!!';
-          comboSplashText.style.color = '#facc15';
-          comboSplashText.style.fontSize = 'clamp(7rem, 30vw, 12rem)';
-          comboSplashText.style.textShadow = '0 0 56px rgba(250, 204, 21, 0.98), 0 0 96px rgba(239, 68, 68, 0.85), 0 12px 32px rgba(0, 0, 0, 0.98)';
-          comboSplashText.classList.add('combo-jackpot-anim');
-          shakeScreen();
-          comboTimerId = setTimeout(() => comboSplashText.classList.add('hidden'), 1120);
-        }
-      }
-
-      // Плавное замедление барабана по степенной кривой (от ~110 мс до ~550 мс)
-      async function spinReelSmooth(reelIndex, pool, durationMs, startDelayMs, endDelayMs) {
-        const symbolEl = reelSymbols[reelIndex];
-        const startTime = performance.now();
-        let currentEmoji = symbolEl.textContent;
-
-        while (true) {
-          const elapsed = performance.now() - startTime;
-          const remaining = durationMs - elapsed;
-          if (remaining <= 0) break;
-
-          const progress = Math.min(1, elapsed / durationMs);
-          const eased = Math.pow(progress, 2.3);
-          const stepDelay = Math.round(startDelayMs + (endDelayMs - startDelayMs) * eased);
-
-          if (remaining <= stepDelay * 0.7) {
-            await sleep(remaining);
-            break;
-          }
-
-          currentEmoji = pickDifferentEmoji(pool, currentEmoji);
-          symbolEl.textContent = currentEmoji;
-
-          const pitch = Math.max(300, 650 - reelIndex * 70 - Math.round(progress * 200));
-          SoundFX.tick(pitch, 0.04 + progress * 0.015);
-
-          await sleep(stepDelay);
-        }
-      }
-
-      function landReel(reelIndex, finalEmoji) {
-        const symbolEl = reelSymbols[reelIndex];
-        symbolEl.classList.remove('reel-spinning', 'reel-landed');
-        symbolEl.textContent = finalEmoji;
-        void symbolEl.offsetWidth;
-        symbolEl.classList.add('reel-landed');
-        SoundFX.stopSound(reelIndex);
-      }
-
-      // Обновление всего интерфейса
+      // --- Обновление интерфейса ---
       function updateUI() {
+        const isHighRoller = balance >= 500;
+        if (isHighRoller && typeof betMode === 'number') {
+          betMode = betMode === 5 ? 'PCT_10' : betMode === 10 ? 'PCT_25' : 'PCT_50';
+        } else if (!isHighRoller && (betMode === 'PCT_10' || betMode === 'PCT_25' || betMode === 'PCT_50')) {
+          betMode = betMode === 'PCT_10' ? 5 : betMode === 'PCT_25' ? 10 : 25;
+        }
+
         const bet = getBetAmount();
         const mult = getMultiplier();
         const pool = getActivePool();
         const canAfford = bet >= 1 && balance >= bet;
-        const locked = isSpinning || isCaptchaActive || isRouletteSpinning;
+        const hasRisk = pendingWin > 0;
+        const locked = isSpinning || isRouletteSpinning || isDiamondSpinning || isCaptchaActive || hasRisk;
 
         balanceValue.textContent = `$${balance}`;
         nDisplay.textContent = emojiCount;
-        payoutBadge.textContent = `x${mult} ($${bet * mult})`;
-        chanceBadge.textContent = `Шанс: ${formatChance(emojiCount)} (x${mult})`;
-        activeEmojisRow.innerHTML = pool.map(e => `<span>${e}</span>`).join('');
+        activeEmojisPreview.textContent = pool.join(' ');
 
-        betPills.forEach(pill => {
-          const raw = pill.dataset.bet;
-          const val = raw === 'MAX' ? 'MAX' : Number(raw);
-          pill.classList.toggle('active', betMode === val);
+        const chancePct = ((1 / mult) * 100).toFixed(2);
+        winChanceText.textContent = `Шанс: ${chancePct}%`;
+        const displayBet = bet > 0 ? bet : 10;
+        payoutBadge.textContent = `x${mult} ($${displayBet * mult})`;
+
+        fastSkipBtn.setAttribute('aria-pressed', String(fastSkipEnabled));
+        fastSkipBtn.classList.toggle('skip-active', fastSkipEnabled);
+        achievementsBtn.textContent = `🏆 ${unlockedAchievements.size}/${ACHIEVEMENTS.length}`;
+
+        const presetConfigs = isHighRoller
+          ? [
+              { mode: 'PCT_10', label: `10% ($${Math.floor(balance * 0.1)})` },
+              { mode: 'PCT_25', label: `25% ($${Math.floor(balance * 0.25)})` },
+              { mode: 'PCT_50', label: `50% ($${Math.floor(balance * 0.5)})` },
+              { mode: 'MAX', label: 'MAX' }
+            ]
+          : [
+              { mode: 5, label: '$5' },
+              { mode: 10, label: '$10' },
+              { mode: 25, label: '$25' },
+              { mode: 'MAX', label: 'MAX' }
+            ];
+
+        betPills.forEach((pill, idx) => {
+          const cfg = presetConfigs[idx];
+          if (!cfg) return;
+          pill.dataset.bet = String(cfg.mode);
+          pill.textContent = cfg.label;
+          pill.classList.toggle('active', betMode === cfg.mode);
           pill.disabled = locked;
         });
 
         customBetInput.disabled = locked;
         customBetInput.classList.toggle('active', betMode === 'CUSTOM');
-        customBetInput.classList.toggle('invalid', betMode === 'CUSTOM' && (bet < 1 || bet > balance));
+        customBetInput.classList.toggle('invalid', betMode === 'CUSTOM' && (!canAfford || bet < 1));
 
         nSlider.disabled = locked;
 
-        if (isSpinning) {
-          spinBtn.disabled = true;
-          spinBtn.textContent = 'Крутим...';
-        } else if (betMode === 'CUSTOM' && bet < 1) {
-          spinBtn.disabled = true;
-          spinBtn.textContent = 'Введите ставку';
-        } else if (!canAfford) {
-          spinBtn.disabled = true;
-          spinBtn.textContent = 'Не хватает на ставку';
+        // Кнопка спина или Риск-панель
+        if (hasRisk) {
+          spinBtn.classList.add('hidden');
+          riskPanel.classList.remove('hidden');
+          collectWinBtn.textContent = `Забрать $${pendingWin}`;
+          doubleRiskBtn.textContent = `🎲 Удвоить до $${pendingWin * 2}`;
         } else {
-          spinBtn.disabled = locked;
-          spinBtn.textContent = `Крутить за $${bet}`;
+          riskPanel.classList.add('hidden');
+          spinBtn.classList.remove('hidden');
+          if (isSpinning) {
+            spinBtn.textContent = 'Барабаны крутятся...';
+            spinBtn.disabled = true;
+          } else if (bet < 1) {
+            spinBtn.textContent = 'Введите ставку от $1';
+            spinBtn.disabled = true;
+          } else if (!canAfford) {
+            spinBtn.textContent = 'Не хватает на ставку';
+            spinBtn.disabled = true;
+          } else {
+            spinBtn.textContent = `Крутить за $${bet}`;
+            spinBtn.disabled = locked;
+          }
         }
 
-        const secLeft = Math.max(0, Math.ceil((dodepCooldownEnd - Date.now()) / 1000));
-        const onCooldown = secLeft > 0;
-        dodepBtn.disabled = locked || onCooldown;
-        dodepBtn.innerHTML = onCooldown
-          ? `<span>⏳ Додеп через ${secLeft}с</span>`
-          : `<span>💸 Додеп</span>`;
-        dodepBtn.classList.toggle('attention', !canAfford && !isSpinning && !onCooldown);
+        // Кнопка Додеп
+        const now = Date.now();
+        if (dodepCooldownEnd > now) {
+          const leftSec = Math.ceil((dodepCooldownEnd - now) / 1000);
+          dodepBtn.textContent = `⏳ Додеп через ${leftSec}с`;
+          dodepBtn.disabled = true;
+        } else {
+          dodepBtn.textContent = '💸 Додеп';
+          dodepBtn.disabled = locked;
+        }
 
-        fastSkipBtn.setAttribute('aria-pressed', String(fastSkipEnabled));
-        fastSkipBtn.classList.toggle('active', fastSkipEnabled);
-        fastSkipBtn.innerHTML = fastSkipEnabled
-          ? '<span>⚡ Пропуск при промахе: ВКЛ</span>'
-          : '<span>⚡ Пропуск при промахе: ВЫКЛ</span>';
+        // Бонусные спины
+        goldSpinBtn.textContent = `🪙 Золотой (${goldSpins})`;
+        goldSpinBtn.classList.toggle('gold-ready', goldSpins > 0);
+        goldSpinBtn.disabled = locked || goldSpins <= 0;
+
+        if (diamondSpins > 0) {
+          diamondSpinBtn.textContent = `💎 Колесо (${diamondSpins})`;
+          diamondSpinBtn.classList.add('diamond-ready');
+          diamondSpinBtn.disabled = locked;
+        } else {
+          diamondSpinBtn.textContent = '💎 Колесо ($100)';
+          diamondSpinBtn.classList.remove('diamond-ready');
+          diamondSpinBtn.disabled = locked || balance < 100;
+        }
+
+        sessionStatsRow.textContent = `Пик: $${peakBalance} • Спинов: ${totalSpins} • Джекпотов: ${totalJackpots}`;
       }
 
-      // --- Главный цикл спина с гарантированной защитой try / finally ---
-      async function spin() {
-        if (isSpinning || isCaptchaActive || isRouletteSpinning) return;
+      // --- Изолированная функция вращения одного барабана без конфликтов таймеров ---
+      function clearReelTimers(slotIndex) {
+        activeReelTokens[slotIndex] += 1;
+        const timers = activeReelTimers[slotIndex];
+        while (timers.length > 0) {
+          clearTimeout(timers.pop());
+        }
+      }
+
+      function spinSingleReel(slotIndex, durationMs, targetEmoji, pool) {
+        clearReelTimers(slotIndex);
+        const token = activeReelTokens[slotIndex];
+        const symEl = reelSymbols[slotIndex];
+        const safePool = Array.isArray(pool) && pool.length > 0 ? pool : getActivePool();
+        let currentSym = symEl.textContent;
+
+        function nextPoolEmoji(excludeEmoji = null) {
+          if (safePool.length <= 1) return safePool[0];
+          let candidate = safePool[Math.floor(Math.random() * safePool.length)];
+          let guard = 0;
+          while ((candidate === currentSym || candidate === excludeEmoji) && guard < 12) {
+            candidate = safePool[Math.floor(Math.random() * safePool.length)];
+            guard += 1;
+          }
+          currentSym = candidate;
+          return candidate;
+        }
+
+        // Построение расписания шагов с прогрессивным ростом dt (плавное замедление в конце)
+        const steps = [];
+        if (durationMs <= 220) {
+          const half = Math.max(40, Math.floor(durationMs / 2));
+          steps.push({ delay: half, isFinal: false });
+          steps.push({ delay: durationMs - half, isFinal: true });
+        } else {
+          const decelSteps = 6;
+          const decelWeights = [1.0, 1.35, 1.8, 2.35, 3.0, 3.8];
+          const weightSum = decelWeights.reduce((acc, w) => acc + w, 0);
+          const decelTotalMs = Math.min(durationMs * 0.48, 1550);
+          const cruiseTotalMs = Math.max(220, durationMs - decelTotalMs);
+
+          const baseTickMs = 95;
+          const cruiseCount = Math.max(2, Math.floor(cruiseTotalMs / baseTickMs));
+          const actualCruiseStep = cruiseTotalMs / cruiseCount;
+
+          for (let i = 0; i < cruiseCount; i++) {
+            steps.push({ delay: actualCruiseStep, isFinal: false });
+          }
+          for (let i = 0; i < decelSteps; i++) {
+            const stepDt = (decelWeights[i] / weightSum) * decelTotalMs;
+            steps.push({ delay: stepDt, isFinal: i === decelSteps - 1 });
+          }
+        }
+
+        return new Promise(resolve => {
+          let stepIdx = 0;
+
+          function scheduleNext() {
+            if (activeReelTokens[slotIndex] !== token) {
+              resolve();
+              return;
+            }
+
+            const currentStep = steps[stepIdx];
+            const timerId = setTimeout(() => {
+              if (activeReelTokens[slotIndex] !== token) {
+                resolve();
+                return;
+              }
+
+              if (currentStep.isFinal) {
+                symEl.textContent = targetEmoji;
+                symEl.classList.remove('pop-stop');
+                void symEl.offsetWidth;
+                symEl.classList.add('pop-stop');
+                clearReelTimers(slotIndex);
+                resolve();
+              } else {
+                const isPenultimate = stepIdx === steps.length - 2;
+                symEl.textContent = nextPoolEmoji(isPenultimate ? targetEmoji : null);
+                const progress = stepIdx / Math.max(1, steps.length - 1);
+                SoundFX.tick(470 - progress * 85 + slotIndex * 45, 0.025, 0.045);
+                vibrate(6);
+                stepIdx += 1;
+                scheduleNext();
+              }
+            }, Math.max(16, Math.round(currentStep.delay)));
+
+            activeReelTimers[slotIndex].push(timerId);
+          }
+
+          scheduleNext();
+        });
+      }
+
+      // --- Основной игровой цикл крутки ---
+      async function runSlotSpin(isGoldSpin = false) {
+        if (isSpinning || isRouletteSpinning || isDiamondSpinning || isCaptchaActive || pendingWin > 0) return;
+
+        const pool = getActivePool();
+        const bet = isGoldSpin ? 500 : getBetAmount();
+
+        if (!isGoldSpin) {
+          if (bet < 1 || balance < bet) return;
+          balance -= bet;
+        } else {
+          if (goldSpins <= 0) return;
+          goldSpins -= 1;
+        }
 
         SoundFX.getCtx();
-        const bet = getBetAmount();
-
-        if (bet < 1 || balance < bet) {
-          showStatus('Недостаточно средств — нажми «Додеп»', 'info');
-          updateUI();
-          return;
-        }
-
         isSpinning = true;
+        totalSpins += 1;
+        spinsUntilCaptcha -= 1;
         hideStatus();
 
-        try {
-          balance -= bet;
-          flashDelta(-bet);
+        reelBoxes.forEach(box => {
+          box.classList.remove('win', 'suspense', 'gold-spin');
+          if (isGoldSpin) box.classList.add('gold-spin');
+        });
 
-          const pool = getActivePool();
-          // Сразу определяем 3 независимых итоговых эмодзи с шансом 1/N каждый
-          const results = [
-            pool[Math.floor(Math.random() * pool.length)],
-            pool[Math.floor(Math.random() * pool.length)],
-            pool[Math.floor(Math.random() * pool.length)]
-          ];
+        saveProgress();
+        updateUI();
 
-          const firstTwoMatch = results[0] === results[1];
-          const isJackpot = firstTwoMatch && results[1] === results[2];
+        // Честно выбираем 3 целевых символа строго из активного пула N
+        const target = [
+          pool[Math.floor(Math.random() * pool.length)],
+          pool[Math.floor(Math.random() * pool.length)],
+          pool[Math.floor(Math.random() * pool.length)]
+        ];
 
-          reelBoxes.forEach((box, idx) => {
-            box.classList.remove('win', 'suspense');
-            reelSymbols[idx].classList.remove('reel-landed');
-            reelSymbols[idx].classList.add('reel-spinning');
-            reelSymbols[idx].textContent = pickDifferentEmoji(pool, reelSymbols[idx].textContent);
-          });
+        const firstTwoMatch = target[0] === target[1];
+        const isJackpot = firstTwoMatch && target[1] === target[2];
 
-          updateUI();
+        // 1. Сначала крутится и полностью останавливается Слот 0 (1600 мс) -> зелёный х1
+        await spinSingleReel(0, 1600, target[0], pool);
+        SoundFX.stopPop(1);
+        triggerComboSplash(1);
+        vibrate(18);
 
-          // 1-й слот: останавливается через 2.2 сек -> зелёный 'х1'
-          await spinReelSmooth(0, pool, 2200, 110, 440);
-          landReel(0, results[0]);
-          showComboSplash(1);
+        // 2. Только после полной остановки Слота 0 запускается и останавливается Слот 1 (1900 мс)
+        await spinSingleReel(1, 1900, target[1], pool);
 
-          // 2-й слот: останавливается через 4.2 сек (+2.0 сек) -> красный 'х2!' при совпадении
-          await spinReelSmooth(1, pool, 2000, 110, 490);
-          landReel(1, results[1]);
-          if (firstTwoMatch) {
-            showComboSplash(2);
-          }
+        // 3. Только после полной остановки Слота 1 запускается Слот 2
+        if (firstTwoMatch) {
+          SoundFX.stopPop(2);
+          triggerComboSplash(2);
+          vibrate([25, 35, 35]);
+          suspenseVignette.classList.add('active');
+          reelBoxes[2].classList.add('suspense');
+          SoundFX.startSuspense();
+          await spinSingleReel(2, 4000, target[2], pool);
+        } else if (fastSkipEnabled) {
+          SoundFX.tick(360, 0.04, 0.05);
+          await spinSingleReel(2, 150, target[2], pool);
+        } else {
+          SoundFX.tick(360, 0.04, 0.05);
+          await spinSingleReel(2, 1400, target[2], pool);
+        }
 
-          // 3-й слот:
-          // - Если первые два совпали -> саспенс до 8.0 сек (+3.8 сек) с багровой виньеткой
-          // - Если первые два разные и включён фаст-скип -> моментальная фиксация за 150 мс
-          // - Обычный режим -> остановка на 5.4 сек (+1.2 сек)
-          if (firstTwoMatch) {
-            setSuspense(true);
-            await spinReelSmooth(2, pool, 3800, 120, 550);
-            setSuspense(false);
-            landReel(2, results[2]);
-          } else if (fastSkipEnabled) {
-            await sleep(150);
-            landReel(2, results[2]);
+        // Завершение раунда
+        suspenseVignette.classList.remove('active');
+        reelBoxes[2].classList.remove('suspense');
+        SoundFX.stopSuspense();
+        isSpinning = false;
+
+        if (isJackpot) {
+          totalJackpots += 1;
+          nearMissStreak = 0;
+          reelBoxes.forEach(box => box.classList.add('win'));
+          SoundFX.stopPop(3);
+          triggerComboSplash(3);
+          vibrate([40, 30, 50, 30, 90]);
+
+          unlockAchievement('first_blood');
+          if (emojiCount === 10) unlockAchievement('sniper');
+
+          if (isGoldSpin) {
+            const goldWin = 2500;
+            balance += goldWin;
+            showStatus(`🪙 ЗОЛОТОЙ ЗАНОС! +$${goldWin} сразу на баланс!`, 'win');
+            checkEconomyAchievements();
           } else {
-            await spinReelSmooth(2, pool, 1200, 115, 440);
-            landReel(2, results[2]);
-          }
-
-          if (isJackpot) {
             const winAmount = bet * getMultiplier();
-            balance += winAmount;
-            flashDelta(winAmount);
-            reelBoxes.forEach(box => box.classList.add('win'));
-            SoundFX.jackpot();
-            showComboSplash(3);
-            showStatus(`Победа! +$${winAmount}`, 'win');
-          } else if (firstTwoMatch) {
-            SoundFX.miss();
-            showStatus('Почти! Не хватило одного символа', 'error');
+            pendingWin = winAmount;
+            showStatus(nextWinPhrase(winAmount), 'win');
+            saveProgress();
+          }
+        } else {
+          SoundFX.miss();
+          vibrate(25);
+
+          if (firstTwoMatch) {
+            nearMissStreak += 1;
+            if (nearMissStreak >= 3) unlockAchievement('heart_attack');
+          } else {
+            nearMissStreak = 0;
           }
 
-          spinsUntilCaptcha -= 1;
-        } catch (err) {
-          console.error('Ошибка в цикле вращения:', err);
-          setSuspense(false);
-        } finally {
-          isSpinning = false;
-          updateUI();
+          showStatus(nextLossPhrase(), 'loss');
+          checkEconomyAchievements();
+        }
 
-          if (spinsUntilCaptcha <= 0) {
-            setTimeout(() => openSobrietyModal(), 600);
-          }
+        updateUI();
+
+        // Проверка на вызов капчи (каждые 5-10 спинов, если нет активной риск-игры)
+        if (spinsUntilCaptcha <= 0 && pendingWin === 0) {
+          spinsUntilCaptcha = getRandomInt(5, 10);
+          await sleep(650);
+          openSobrietyQuiz();
         }
       }
 
-      // --- Рулетка Додепа ---
-      function startDodepCooldown(sec = 60) {
-        dodepCooldownEnd = Date.now() + sec * 1000;
-        if (dodepIntervalId) clearInterval(dodepIntervalId);
+      // --- Риск-игра 50/50 ---
+      function collectPendingWin() {
+        if (pendingWin <= 0 || isSpinning) return;
+        const amount = pendingWin;
+        pendingWin = 0;
+        balance += amount;
+        SoundFX.stopPop(2);
+        vibrate(25);
+        showStatus(`Забрал $${amount} в банк! Красава.`, 'win');
+        checkEconomyAchievements();
         updateUI();
 
-        dodepIntervalId = setInterval(() => {
-          if (Date.now() >= dodepCooldownEnd) {
-            clearInterval(dodepIntervalId);
-            dodepIntervalId = null;
-            dodepCooldownEnd = 0;
-          }
-          updateUI();
-        }, 500);
+        if (spinsUntilCaptcha <= 0) {
+          spinsUntilCaptcha = getRandomInt(5, 10);
+          setTimeout(openSobrietyQuiz, 500);
+        }
       }
 
+      async function playDoubleRiskGame() {
+        if (pendingWin <= 0 || isSpinning) return;
+        SoundFX.getCtx();
+        collectWinBtn.disabled = true;
+        doubleRiskBtn.disabled = true;
+
+        coinStage.className = 'coin-stage coin-flipping';
+        coinStage.textContent = '🪙';
+        coinResultText.style.color = '#fbbf24';
+        coinResultText.textContent = `На кону $${pendingWin * 2}...`;
+        coinModal.classList.remove('hidden');
+
+        for (let i = 0; i < 8; i++) {
+          SoundFX.tick(580 + (i % 2) * 140, 0.03, 0.05);
+          vibrate(10);
+          await sleep(125);
+        }
+
+        const won = Math.random() < 0.5;
+        coinStage.classList.remove('coin-flipping');
+
+        if (won) {
+          pendingWin *= 2;
+          coinStage.textContent = '👑';
+          coinResultText.style.color = '#34d399';
+          coinResultText.textContent = `УДВОЕНИЕ! Банк раунда: $${pendingWin}!`;
+          SoundFX.stopPop(3);
+          vibrate([30, 30, 60]);
+          unlockAchievement('steel_nerves');
+          saveProgress();
+        } else {
+          pendingWin = 0;
+          coinStage.textContent = '💀';
+          coinResultText.style.color = '#f87171';
+          coinResultText.textContent = 'Сгорело в ноль! Жадность фраера сгубила.';
+          SoundFX.miss();
+          vibrate(60);
+          showStatus('Риск не оправдался — выигрыш раунда сгорел!', 'loss');
+          checkEconomyAchievements();
+        }
+
+        await sleep(1100);
+        coinModal.classList.add('hidden');
+        collectWinBtn.disabled = false;
+        doubleRiskBtn.disabled = false;
+        updateUI();
+
+        if (!won && spinsUntilCaptcha <= 0) {
+          spinsUntilCaptcha = getRandomInt(5, 10);
+          openSobrietyQuiz();
+        }
+      }
+
+      // --- Рулетка «Додеп» ---
       function pickWeightedDodep() {
         const roll = Math.random() * 100;
         let acc = 0;
@@ -1718,307 +2452,833 @@
         return DODEP_ITEMS[DODEP_ITEMS.length - 1];
       }
 
-      function renderOddsLegend() {
-        rouletteOddsLegend.innerHTML = DODEP_ITEMS.map(item => `
-          <div class="odds-cell" title="${item.title}">
-            <span>${item.icon} $${item.reward}</span>
-            <span>${item.chance}%</span>
+      function renderDodepOddsLegend() {
+        dodepOddsGrid.innerHTML = DODEP_ITEMS.map(item => `
+          <div class="dodep-odds-item">
+            <span>${item.emoji} ${item.name}</span>
+            <span style="color:#fbbf24;font-weight:800;">${item.chance}% ($${item.reward})</span>
           </div>
         `).join('');
       }
 
-      function renderRouletteStrip(items) {
-        rouletteTrack.innerHTML = items.map(item => `
-          <div class="roulette-item ${item.rarity}">
-            <span class="r-icon">${item.icon}</span>
-            <span class="r-name">${item.title}</span>
-            <span class="r-val">+$${item.reward}</span>
-          </div>
-        `).join('');
+      function startDodepCooldown(seconds = 60) {
+        dodepCooldownEnd = Date.now() + seconds * 1000;
+        if (dodepCooldownTimer) clearInterval(dodepCooldownTimer);
+        dodepCooldownTimer = setInterval(() => {
+          if (Date.now() >= dodepCooldownEnd) {
+            dodepCooldownEnd = 0;
+            clearInterval(dodepCooldownTimer);
+            dodepCooldownTimer = null;
+          }
+          updateUI();
+        }, 500);
+        updateUI();
       }
 
-      function openDodepModal() {
-        if (isSpinning || isCaptchaActive || isRouletteSpinning) return;
+      async function openDodepRoulette() {
+        if (isSpinning || isRouletteSpinning || isDiamondSpinning || isCaptchaActive || pendingWin > 0) return;
         if (Date.now() < dodepCooldownEnd) return;
-
-        SoundFX.getCtx();
-        renderOddsLegend();
-        renderRouletteStrip(Array.from({ length: 12 }, () => pickWeightedDodep()));
-
-        rouletteTrack.style.transform = 'translate3d(0px, 0, 0)';
-        rouletteResultBox.classList.add('hidden');
-        spinRouletteBtn.disabled = false;
-        spinRouletteBtn.textContent = 'Крутить рулетку';
-        spinRouletteBtn.dataset.state = 'ready';
-        closeDodepBtn.disabled = false;
-
-        dodepModal.classList.remove('hidden');
-      }
-
-      function closeDodepModal() {
-        if (isRouletteSpinning) return;
-        dodepModal.classList.add('hidden');
-      }
-
-      function spinDodepRoulette() {
-        if (isRouletteSpinning) return;
-        if (spinRouletteBtn.dataset.state === 'done') {
-          closeDodepModal();
-          return;
-        }
 
         SoundFX.getCtx();
         isRouletteSpinning = true;
         updateUI();
 
-        spinRouletteBtn.disabled = true;
-        spinRouletteBtn.textContent = 'Крутим ленту...';
-        closeDodepBtn.disabled = true;
-        rouletteResultBox.classList.add('hidden');
+        renderDodepOddsLegend();
+        dodepResultText.style.color = '#fbbf24';
+        dodepResultText.textContent = 'Крутим варианты пополнения...';
 
-        const TOTAL_CARDS = 48;
-        const WIN_IDX = 38;
-        const CARD_WIDTH = 116; // 108px + 8px margins
+        const totalCards = 46;
+        const winIndex = 38;
+        const winnerItem = pickWeightedDodep();
+        const stripItems = [];
 
-        const winner = pickWeightedDodep();
-        const strip = Array.from({ length: TOTAL_CARDS }, (_, i) =>
-          i === WIN_IDX ? winner : pickWeightedDodep()
-        );
+        for (let i = 0; i < totalCards; i++) {
+          stripItems.push(i === winIndex ? winnerItem : pickWeightedDodep());
+        }
 
-        renderRouletteStrip(strip);
+        caseStrip.style.transition = 'none';
+        caseStrip.style.transform = 'translateX(0px)';
+        caseStrip.innerHTML = stripItems.map(item => `
+          <div class="case-item ${item.rarity}">
+            <div class="case-item-emoji">${item.emoji}</div>
+            <div class="case-item-name">${item.name}</div>
+            <div class="case-item-val">+$${item.reward}</div>
+          </div>
+        `).join('');
 
-        const viewW = rouletteViewport.clientWidth || 340;
-        const jitter = randomInt(-26, 26);
-        const targetX = WIN_IDX * CARD_WIDTH + CARD_WIDTH / 2 - viewW / 2 + jitter;
+        dodepModal.classList.remove('hidden');
+        await sleep(40);
 
-        rouletteTrack.style.transform = 'translate3d(0px, 0, 0)';
-        const duration = 4500;
-        const t0 = performance.now();
-        let lastIdx = -1;
+        const viewportWidth = caseStrip.parentElement ? caseStrip.parentElement.clientWidth : 360;
+        const cardStride = 120; // 114px ширина карточки + 6px горизонтальные отступы
+        const randomOffsetWithinCard = getRandomInt(-24, 24);
+        const targetOffset = (winIndex * cardStride + cardStride / 2) - (viewportWidth / 2) + randomOffsetWithinCard;
 
-        function frame(now) {
-          const elapsed = now - t0;
-          const p = Math.min(1, elapsed / duration);
-          const eased = 1 - Math.pow(1 - p, 4);
-          const curX = targetX * eased;
+        const durationMs = 4200;
+        const startTime = performance.now();
+        let lastTickIndex = -1;
 
-          rouletteTrack.style.transform = `translate3d(${-curX}px, 0, 0)`;
+        await new Promise(resolve => {
+          function step(now) {
+            if (!isRouletteSpinning) {
+              resolve();
+              return;
+            }
+            const elapsed = now - startTime;
+            const t = Math.min(1, elapsed / durationMs);
+            const eased = 1 - Math.pow(1 - t, 3.6);
+            const currentX = targetOffset * eased;
+            caseStrip.style.transform = `translateX(${-currentX}px)`;
 
-          const cardIdx = Math.floor((curX + viewW / 2) / CARD_WIDTH);
-          if (cardIdx !== lastIdx) {
-            lastIdx = cardIdx;
-            SoundFX.tick(550 - Math.round(p * 200), 0.04);
+            const passedCardIdx = Math.floor((currentX + viewportWidth / 2) / cardStride);
+            if (passedCardIdx !== lastTickIndex) {
+              lastTickIndex = passedCardIdx;
+              SoundFX.tick(520 - t * 140, 0.025, 0.045);
+              vibrate(7);
+            }
+
+            if (t < 1) {
+              requestAnimationFrame(step);
+            } else {
+              resolve();
+            }
           }
-
-          if (p < 1) {
-            requestAnimationFrame(frame);
-          } else {
-            isRouletteSpinning = false;
-            balance += winner.reward;
-            flashDelta(winner.reward);
-            startDodepCooldown(60);
-
-            if (winner.reward >= 250) SoundFX.jackpot();
-            else SoundFX.stopSound(2);
-
-            rouletteResultTitle.textContent = `${winner.icon} ${winner.title}`;
-            rouletteResultAmount.textContent = `+$${winner.reward}`;
-            rouletteResultBox.classList.remove('hidden');
-
-            spinRouletteBtn.disabled = false;
-            spinRouletteBtn.textContent = `Забрать +$${winner.reward}`;
-            spinRouletteBtn.dataset.state = 'done';
-            closeDodepBtn.disabled = false;
-
-            showStatus(`${winner.title}: +$${winner.reward}`, 'info');
-            updateUI();
-          }
-        }
-
-        requestAnimationFrame(frame);
-      }
-
-      // --- Проверка на трезвость (50 вопросов по играм без повторений) ---
-      function shuffleDeck() {
-        const arr = Array.from({ length: QUIZ_BANK.length }, (_, i) => i);
-        for (let i = arr.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [arr[i], arr[j]] = [arr[j], arr[i]];
-        }
-        quizDeck = arr;
-        quizPointer = 0;
-      }
-
-      function renderNextQuestion() {
-        isQuizValidating = false;
-        quizFeedbackText.classList.add('hidden');
-
-        if (quizDeck.length === 0 || quizPointer >= quizDeck.length) {
-          shuffleDeck();
-        }
-
-        const num = quizPointer + 1;
-        const qIndex = quizDeck[quizPointer];
-        quizPointer += 1;
-
-        const item = QUIZ_BANK[qIndex];
-        quizCounterBadge.textContent = `Вопрос ${num}/${QUIZ_BANK.length}`;
-        quizQuestionText.textContent = item.question;
-
-        const variants = item.options.map((text, idx) => ({
-          text,
-          isRight: idx === item.correct
-        }));
-
-        for (let i = variants.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [variants[i], variants[j]] = [variants[j], variants[i]];
-        }
-
-        quizOptionsList.innerHTML = '';
-        variants.forEach(v => {
-          const btn = document.createElement('button');
-          btn.type = 'button';
-          btn.className = 'quiz-option-btn';
-          btn.textContent = v.text;
-          btn.addEventListener('click', () => handleAnswer(btn, v.isRight));
-          quizOptionsList.appendChild(btn);
+          requestAnimationFrame(step);
         });
+
+        balance += winnerItem.reward;
+        if (winnerItem.id === 'house') {
+          housesSold += 1;
+          unlockAchievement('homeless_rich');
+        }
+
+        SoundFX.stopPop(winnerItem.reward >= 600 ? 3 : 2);
+        vibrate([30, 35, 60]);
+        dodepResultText.style.color = '#34d399';
+        dodepResultText.textContent = `Выпало: ${winnerItem.emoji} ${winnerItem.name} (+$${winnerItem.reward})!`;
+        showStatus(`💸 Додеп: ${winnerItem.name} — начислено +$${winnerItem.reward}!`, 'win');
+
+        isRouletteSpinning = false;
+        checkEconomyAchievements();
+        startDodepCooldown(60);
       }
 
-      function openSobrietyModal() {
-        isCaptchaActive = true;
-        dodepModal.classList.add('hidden');
-        renderNextQuestion();
-        sobrietyModal.classList.remove('hidden');
+      // --- Алмазное колесо фортуны ---
+      function initDiamondWheelVisuals() {
+        // 47.5% Красный (0..171 deg), 5% Зелёный (171..189 deg), 47.5% Чёрный (189..360 deg)
+        diamondWheelDisc.style.background =
+          'conic-gradient(#ef4444 0deg 171deg, #10b981 171deg 189deg, #27272f 189deg 360deg)';
+      }
+
+      function openDiamondWheelModal() {
+        if (isSpinning || isRouletteSpinning || isDiamondSpinning || isCaptchaActive || pendingWin > 0) return;
+
+        if (diamondSpins > 0) {
+          diamondSpinIsFreeTicket = true;
+          diamondModeDesc.textContent = `Бесплатный билет за ачивку! Выплаты: 🔴 +$500 • ⚫ +$500 • 🟢 +$1000`;
+          redPayoutLabel.textContent = '+$500';
+          blackPayoutLabel.textContent = '+$500';
+          greenPayoutLabel.textContent = '+$1000';
+        } else {
+          if (balance < 100) {
+            showStatus('Нужно $100 на балансе или билет за достижение!', 'loss');
+            return;
+          }
+          diamondSpinIsFreeTicket = false;
+          diamondModeDesc.textContent = `Платный запуск ($100). Выплаты: 🔴 +$200 • ⚫ +$200 • 🟢 +$1400`;
+          redPayoutLabel.textContent = '+$200';
+          blackPayoutLabel.textContent = '+$200';
+          greenPayoutLabel.textContent = '+$1400';
+        }
+
+        diamondResultText.textContent = '';
+        colorChoiceBtns.forEach(btn => { btn.disabled = false; });
+        diamondModal.classList.remove('hidden');
+      }
+
+      async function spinDiamondWheel(chosenColor) {
+        if (isDiamondSpinning) return;
+
+        // Списываем билет или $100 сразу в момент запуска вращения
+        if (diamondSpinIsFreeTicket) {
+          if (diamondSpins <= 0) return;
+          diamondSpins = Math.max(0, diamondSpins - 1);
+        } else {
+          if (balance < 100) {
+            diamondResultText.style.color = '#f87171';
+            diamondResultText.textContent = 'Не хватает $100 на балансе!';
+            return;
+          }
+          balance -= 100;
+        }
+
+        SoundFX.getCtx();
+        isDiamondSpinning = true;
+        colorChoiceBtns.forEach(btn => { btn.disabled = true; });
+        saveProgress();
+        updateUI();
+
+        // Честный розыгрыш сектора: 47.5% red, 5% green, 47.5% black
+        const roll = Math.random() * 100;
+        let landedColor = 'black';
+        let targetSectorAngle = 274; // центр чёрного сектора (189..360)
+
+        if (roll < 47.5) {
+          landedColor = 'red';
+          targetSectorAngle = getRandomInt(14, 157);
+        } else if (roll < 52.5) {
+          landedColor = 'green';
+          targetSectorAngle = getRandomInt(174, 186);
+        } else {
+          landedColor = 'black';
+          targetSectorAngle = getRandomInt(203, 346);
+        }
+
+        const desiredPointerAngle = (360 - targetSectorAngle) % 360;
+        const currentMod = ((diamondWheelRotation % 360) + 360) % 360;
+        const delta = (desiredPointerAngle - currentMod + 360) % 360;
+        const totalSpinDeg = 5 * 360 + delta;
+
+        const startRot = diamondWheelRotation;
+        const endRot = startRot + totalSpinDeg;
+        const durationMs = 3400;
+        const startTime = performance.now();
+        let lastSliceTick = -1;
+
+        diamondResultText.style.color = '#7dd3fc';
+        diamondResultText.textContent = 'Колесо крутится...';
+
+        await new Promise(resolve => {
+          function animateWheel(now) {
+            if (!isDiamondSpinning) {
+              resolve();
+              return;
+            }
+            const elapsed = now - startTime;
+            const t = Math.min(1, elapsed / durationMs);
+            const eased = 1 - Math.pow(1 - t, 3.5);
+            const curAngle = startRot + totalSpinDeg * eased;
+            diamondWheelDisc.style.transform = `rotate(${curAngle}deg)`;
+
+            const sliceIdx = Math.floor(curAngle / 22.5);
+            if (sliceIdx !== lastSliceTick) {
+              lastSliceTick = sliceIdx;
+              SoundFX.tick(620 - t * 180, 0.022, 0.04);
+              vibrate(6);
+            }
+
+            if (t < 1) {
+              requestAnimationFrame(animateWheel);
+            } else {
+              diamondWheelRotation = endRot;
+              resolve();
+            }
+          }
+          requestAnimationFrame(animateWheel);
+        });
+
+        const colorNames = { red: '🔴 Красный', black: '⚫ Чёрный', green: '🟢 Зелёный' };
+        const won = landedColor === chosenColor;
+
+        if (won) {
+          const prize = diamondSpinIsFreeTicket
+            ? (landedColor === 'green' ? 1000 : 500)
+            : (landedColor === 'green' ? 1400 : 200);
+          balance += prize;
+          SoundFX.stopPop(3);
+          vibrate([35, 30, 70]);
+          diamondResultText.style.color = '#34d399';
+          diamondResultText.textContent = `Выпал ${colorNames[landedColor]}! Победа +$${prize}!`;
+          showStatus(`💎 Алмазное колесо: ${colorNames[landedColor]} — выигрыш +$${prize}!`, 'win');
+        } else {
+          SoundFX.miss();
+          vibrate(35);
+          diamondResultText.style.color = '#f87171';
+          diamondResultText.textContent = `Выпал ${colorNames[landedColor]}. Не угадал!`;
+          showStatus(`💎 Алмазное колесо: выпал ${colorNames[landedColor]}, мимо!`, 'loss');
+        }
+
+        isDiamondSpinning = false;
+        diamondSpinIsFreeTicket = false;
+        checkEconomyAchievements();
         updateUI();
       }
 
-      function handleAnswer(btn, isRight) {
-        if (isQuizValidating) return;
-        isQuizValidating = true;
+      // --- Проверка на трезвость (50 вопросов по играм без повторений) ---
+      function nextQuizQuestion() {
+        if (quizDeck.length === 0 || quizPointer >= quizDeck.length) {
+          quizDeck = shuffleArray(GAME_QUIZ_BANK);
+          quizPointer = 0;
+        }
+        const item = quizDeck[quizPointer];
+        quizPointer += 1;
+        return { item, number: quizPointer };
+      }
 
-        quizOptionsList.querySelectorAll('button').forEach(b => (b.disabled = true));
+      function openSobrietyQuiz() {
+        if (isCaptchaActive) return;
+        isCaptchaActive = true;
+        updateUI();
 
-        if (isRight) {
-          SoundFX.jackpot();
-          balance += 5;
-          flashDelta(5);
-          updateUI();
+        const { item, number } = nextQuizQuestion();
+        quizCounter.textContent = `Вопрос ${number}/${GAME_QUIZ_BANK.length} • +$5 / -$10`;
+        quizQuestionText.textContent = item.q;
+        quizFeedback.textContent = '';
 
-          btn.classList.add('correct');
-          quizFeedbackText.textContent = 'Верно! Трезвость подтверждена: +$5';
-          quizFeedbackText.style.color = '#34d399';
-          quizFeedbackText.classList.remove('hidden');
+        const indexedOpts = item.opts.map((text, idx) => ({ text, isCorrect: idx === item.a }));
+        const shuffledOpts = shuffleArray(indexedOpts);
 
-          setTimeout(() => {
-            sobrietyModal.classList.add('hidden');
-            isCaptchaActive = false;
-            isQuizValidating = false;
-            spinsUntilCaptcha = randomInt(5, 10);
-            updateUI();
-          }, 1100);
-        } else {
-          SoundFX.miss();
-          const penalty = Math.min(10, balance);
-          balance = Math.max(0, balance - 10);
-          if (penalty > 0) flashDelta(-penalty);
-          updateUI();
+        quizOptionsContainer.innerHTML = '';
+        shuffledOpts.forEach(opt => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'quiz-opt-btn';
+          btn.textContent = opt.text;
 
-          btn.classList.add('wrong');
-          sobrietyBox.classList.remove('wiggle');
-          void sobrietyBox.offsetWidth;
-          sobrietyBox.classList.add('wiggle');
+          btn.addEventListener('click', async () => {
+            const allBtns = Array.from(quizOptionsContainer.querySelectorAll('button'));
+            allBtns.forEach(b => { b.disabled = true; });
 
-          quizFeedbackText.textContent = penalty > 0
-            ? `Ошибка! Штраф -$${penalty}. Ответь на следующий вопрос:`
-            : 'Ошибка! Баланс уже $0. Ответь на следующий вопрос:';
-          quizFeedbackText.style.color = '#f87171';
-          quizFeedbackText.classList.remove('hidden');
+            if (opt.isCorrect) {
+              btn.classList.add('correct');
+              balance += 5;
+              quizCorrectStreak += 1;
+              SoundFX.stopPop(2);
+              vibrate(25);
+              quizFeedback.style.color = '#34d399';
+              quizFeedback.textContent = `Верно! +$5 на баланс (серия: ${quizCorrectStreak}/5)`;
 
-          setTimeout(() => {
-            renderNextQuestion();
-          }, 1250);
+              if (quizCorrectStreak >= 5) unlockAchievement('game_guru');
+              checkEconomyAchievements();
+
+              await sleep(850);
+              captchaModal.classList.add('hidden');
+              isCaptchaActive = false;
+              showStatus('🧠 Трезвость подтверждена! Начислено +$5.', 'win');
+              updateUI();
+            } else {
+              btn.classList.add('wrong');
+              const penalty = Math.min(balance, 10);
+              balance = Math.max(0, balance - 10);
+              quizCorrectStreak = 0;
+              SoundFX.miss();
+              vibrate(50);
+              quizFeedback.style.color = '#f87171';
+              quizFeedback.textContent = penalty > 0
+                ? `Ошибка! Штраф -$${penalty}. Даём следующий вопрос...`
+                : 'Ошибка! Денег на штраф нет, но вопрос придётся пройти...';
+
+              checkEconomyAchievements();
+              updateUI();
+
+              await sleep(1050);
+              isCaptchaActive = false;
+              openSobrietyQuiz();
+            }
+          });
+
+          quizOptionsContainer.appendChild(btn);
+        });
+
+        captchaModal.classList.remove('hidden');
+      }
+
+      // --- Поделиться результатом с друзьями (генерация PNG-карточки 800x1020) ---
+      function getPlayerMemeTitle() {
+        if (peakBalance >= 10000 || unlockedAchievements.has('oligarch')) {
+          return 'Олигарх всея рандома';
+        }
+        if (housesSold > 0 || unlockedAchievements.has('homeless_rich')) {
+          return 'Бездомный миллионер';
+        }
+        if (totalJackpots >= 3) {
+          return 'Везучий сукин сын';
+        }
+        if (quizCorrectStreak >= 5 || unlockedAchievements.has('game_guru')) {
+          return 'Трезвый интеллектуал';
+        }
+        return 'Начинающий лудоман';
+      }
+
+      function buildShareTextSummary() {
+        const houseLine = housesSold > 0 ? `🏚️ Продано хат: ${housesSold}\n` : '';
+        return [
+          `🎰 ЭМОДЗИ-СЛОТЫ // ${getPlayerMemeTitle().toUpperCase()}`,
+          `👑 Пиковый баланс: $${peakBalance}`,
+          `💰 Текущий банк: $${balance}`,
+          `🎲 Спинов: ${totalSpins} | Джекпотов x3: ${totalJackpots}`,
+          `${houseLine}🏆 Достижения: ${unlockedAchievements.size}/${ACHIEVEMENTS.length}`,
+          'Попробуй побить рекорд: roamurz.github.io/Kazino-emodzi'
+        ].join('\n');
+      }
+
+      async function copyShareTextFallback(text) {
+        let copied = false;
+        try {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.setAttribute('readonly', '');
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          copied = document.execCommand('copy');
+          document.body.removeChild(ta);
+        } catch (_) {}
+
+        if (!copied && navigator.clipboard && navigator.clipboard.writeText) {
+          try {
+            await navigator.clipboard.writeText(text);
+            copied = true;
+          } catch (_) {}
+        }
+        return copied;
+      }
+
+      function drawRoundedRectPath(ctx, x, y, w, h, r) {
+        const radius = Math.min(r, w / 2, h / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.arcTo(x + w, y, x + w, y + h, radius);
+        ctx.arcTo(x + w, y + h, x, y + h, radius);
+        ctx.arcTo(x, y + h, x, y, radius);
+        ctx.arcTo(x, y, x + w, y, radius);
+        ctx.closePath();
+      }
+
+      function drawWrappedCenterText(ctx, text, centerX, startY, maxWidth, lineHeight, maxLines = 2) {
+        const words = text.split(' ');
+        const lines = [];
+        let current = '';
+
+        for (const word of words) {
+          const candidate = current ? `${current} ${word}` : word;
+          if (ctx.measureText(candidate).width <= maxWidth) {
+            current = candidate;
+          } else {
+            if (current) lines.push(current);
+            current = word;
+          }
+        }
+        if (current) lines.push(current);
+
+        const clamped = lines.slice(0, maxLines);
+        clamped.forEach((line, idx) => {
+          ctx.fillText(line, centerX, startY + idx * lineHeight);
+        });
+      }
+
+      function renderPlayerCardCanvas() {
+        const W = 800;
+        const H = 1020;
+        const canvas = document.createElement('canvas');
+        canvas.width = W;
+        canvas.height = H;
+        const ctx = canvas.getContext('2d');
+
+        // 1. Тёмный фон с золотым радиальным свечением
+        ctx.fillStyle = '#09090b';
+        ctx.fillRect(0, 0, W, H);
+
+        const topGlow = ctx.createRadialGradient(W / 2, 170, 20, W / 2, 170, 520);
+        topGlow.addColorStop(0, 'rgba(245, 158, 11, 0.22)');
+        topGlow.addColorStop(0.55, 'rgba(217, 119, 6, 0.06)');
+        topGlow.addColorStop(1, 'rgba(9, 9, 11, 0)');
+        ctx.fillStyle = topGlow;
+        ctx.fillRect(0, 0, W, H);
+
+        // Внешняя золотая рамка карточки
+        drawRoundedRectPath(ctx, 20, 20, W - 40, H - 40, 32);
+        ctx.fillStyle = '#111115';
+        ctx.fill();
+        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = 'rgba(245, 158, 11, 0.45)';
+        ctx.stroke();
+
+        // Внутренняя тонкая декоративная рамка
+        drawRoundedRectPath(ctx, 32, 32, W - 64, H - 64, 24);
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+        ctx.stroke();
+
+        // 2. Шапка: ЭМОДЗИ-СЛОТЫ // КАРТОЧКА ИГРОКА + Мемный титул
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#a1a1aa';
+        ctx.font = '800 18px Inter, -apple-system, sans-serif';
+        ctx.fillText('ЭМОДЗИ-СЛОТЫ // КАРТОЧКА ИГРОКА', W / 2, 74);
+
+        const memeTitle = getPlayerMemeTitle();
+        ctx.font = '900 32px Inter, -apple-system, sans-serif';
+        const titleTextWidth = ctx.measureText(memeTitle).width;
+        const badgeW = Math.min(W - 110, Math.max(340, titleTextWidth + 68));
+        const badgeH = 54;
+        const badgeX = (W - badgeW) / 2;
+        const badgeY = 100;
+
+        drawRoundedRectPath(ctx, badgeX, badgeY, badgeW, badgeH, 16);
+        const badgeGrad = ctx.createLinearGradient(badgeX, badgeY, badgeX + badgeW, badgeY + badgeH);
+        badgeGrad.addColorStop(0, 'rgba(245, 158, 11, 0.24)');
+        badgeGrad.addColorStop(1, 'rgba(180, 83, 9, 0.14)');
+        ctx.fillStyle = badgeGrad;
+        ctx.fill();
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = 'rgba(251, 191, 36, 0.65)';
+        ctx.stroke();
+
+        ctx.fillStyle = '#fbbf24';
+        ctx.fillText(`«${memeTitle}»`, W / 2, badgeY + badgeH / 2 + 1);
+
+        // 3. Главный блок с пиковым балансом
+        const heroX = 52;
+        const heroY = 178;
+        const heroW = W - 104;
+        const heroH = 152;
+
+        drawRoundedRectPath(ctx, heroX, heroY, heroW, heroH, 24);
+        const heroGrad = ctx.createLinearGradient(heroX, heroY, heroX, heroY + heroH);
+        heroGrad.addColorStop(0, '#19181f');
+        heroGrad.addColorStop(1, '#141418');
+        ctx.fillStyle = heroGrad;
+        ctx.fill();
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = 'rgba(245, 158, 11, 0.35)';
+        ctx.stroke();
+
+        ctx.fillStyle = '#a1a1aa';
+        ctx.font = '800 17px Inter, -apple-system, sans-serif';
+        ctx.fillText('👑 ПИКОВЫЙ БАЛАНС ЗА СЕССИЮ', W / 2, heroY + 38);
+
+        ctx.save();
+        ctx.shadowColor = 'rgba(245, 158, 11, 0.45)';
+        ctx.shadowBlur = 24;
+        ctx.fillStyle = '#fbbf24';
+        ctx.font = '900 72px Inter, -apple-system, sans-serif';
+        ctx.fillText(`$${peakBalance.toLocaleString('en-US')}`, W / 2, heroY + 100);
+        ctx.restore();
+
+        // 4. Сетка 2x2 с показателями сессии
+        const statsItems = [
+          { label: '💰 ТЕКУЩИЙ БАНК', value: `$${balance.toLocaleString('en-US')}`, color: '#34d399' },
+          { label: '🎲 ВСЕГО СПИНОВ', value: String(totalSpins), color: '#f4f4f5' },
+          { label: '🔥 ДЖЕКПОТЫ X3', value: String(totalJackpots), color: '#fbbf24' },
+          { label: '🏚️ ПРОДАНО ХАТ', value: String(housesSold), color: housesSold > 0 ? '#f87171' : '#a1a1aa' }
+        ];
+
+        const gridStartY = 352;
+        const gridGap = 16;
+        const cellW = (heroW - gridGap) / 2;
+        const cellH = 96;
+
+        statsItems.forEach((st, i) => {
+          const col = i % 2;
+          const row = Math.floor(i / 2);
+          const cx = heroX + col * (cellW + gridGap);
+          const cy = gridStartY + row * (cellH + gridGap);
+
+          drawRoundedRectPath(ctx, cx, cy, cellW, cellH, 18);
+          ctx.fillStyle = '#17171d';
+          ctx.fill();
+          ctx.lineWidth = 1.2;
+          ctx.strokeStyle = '#272730';
+          ctx.stroke();
+
+          ctx.fillStyle = '#71717a';
+          ctx.font = '800 14px Inter, -apple-system, sans-serif';
+          ctx.fillText(st.label, cx + cellW / 2, cy + 30);
+
+          ctx.fillStyle = st.color;
+          ctx.font = '900 32px Inter, -apple-system, sans-serif';
+          ctx.fillText(st.value, cx + cellW / 2, cy + 66);
+        });
+
+        // 5. Заголовок секции достижений + Сетка 4x2 всех 8 достижений
+        const achHeaderY = 594;
+        ctx.fillStyle = '#f4f4f5';
+        ctx.font = '900 21px Inter, -apple-system, sans-serif';
+        ctx.fillText(`🏆 ДОСТИЖЕНИЯ: ${unlockedAchievements.size} / ${ACHIEVEMENTS.length}`, W / 2, achHeaderY);
+
+        const achStartY = 622;
+        const achGapX = 12;
+        const achGapY = 12;
+        const achCols = 4;
+        const achCardW = (heroW - achGapX * (achCols - 1)) / achCols;
+        const achCardH = 144;
+
+        ACHIEVEMENTS.forEach((ach, idx) => {
+          const col = idx % achCols;
+          const row = Math.floor(idx / achCols);
+          const ax = heroX + col * (achCardW + achGapX);
+          const ay = achStartY + row * (achCardH + achGapY);
+          const isUnlocked = unlockedAchievements.has(ach.id);
+
+          drawRoundedRectPath(ctx, ax, ay, achCardW, achCardH, 18);
+          if (isUnlocked) {
+            const cardGrad = ctx.createLinearGradient(ax, ay, ax, ay + achCardH);
+            cardGrad.addColorStop(0, 'rgba(245, 158, 11, 0.16)');
+            cardGrad.addColorStop(1, '#18181f');
+            ctx.fillStyle = cardGrad;
+            ctx.fill();
+            ctx.lineWidth = 1.8;
+            ctx.strokeStyle = 'rgba(245, 158, 11, 0.72)';
+            ctx.stroke();
+          } else {
+            ctx.fillStyle = '#131317';
+            ctx.fill();
+            ctx.lineWidth = 1.2;
+            ctx.strokeStyle = '#23232b';
+            ctx.stroke();
+          }
+
+          ctx.save();
+          if (!isUnlocked) ctx.globalAlpha = 0.42;
+          ctx.font = '40px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
+          ctx.fillText(isUnlocked ? ach.icon : '🔒', ax + achCardW / 2, ay + 48);
+
+          ctx.fillStyle = isUnlocked ? '#ffffff' : '#71717a';
+          ctx.font = '800 13.5px Inter, -apple-system, sans-serif';
+          drawWrappedCenterText(ctx, ach.name, ax + achCardW / 2, ay + 96, achCardW - 18, 17, 2);
+          ctx.restore();
+        });
+
+        // 6. Нижний колонтитул
+        const footerY = 958;
+        ctx.strokeStyle = 'rgba(245, 158, 11, 0.25)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(heroX, footerY - 26);
+        ctx.lineTo(W - heroX, footerY - 26);
+        ctx.stroke();
+
+        ctx.fillStyle = '#a1a1aa';
+        ctx.font = '700 17px Inter, -apple-system, sans-serif';
+        ctx.fillText('Попробуй побить рекорд: roamurz.github.io/Kazino-emodzi', W / 2, footerY + 2);
+
+        const dataUrl = canvas.toDataURL('image/png');
+        return new Promise(resolve => {
+          try {
+            canvas.toBlob(blob => {
+              resolve({ blob, dataUrl });
+            }, 'image/png');
+          } catch (_) {
+            resolve({ blob: null, dataUrl });
+          }
+        });
+      }
+
+      function downloadPngBlob(blob, fallbackDataUrl) {
+        const url = blob ? URL.createObjectURL(blob) : fallbackDataUrl;
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'emoji-slots-record.png';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        if (blob) {
+          setTimeout(() => URL.revokeObjectURL(url), 4000);
         }
       }
 
-      // --- Слушатели событий ---
+      async function openShareCardModal() {
+        SoundFX.getCtx();
+        vibrate(15);
+
+        const { blob, dataUrl } = await renderPlayerCardCanvas();
+        lastGeneratedPngBlob = blob;
+        if (lastGeneratedPngUrl) {
+          URL.revokeObjectURL(lastGeneratedPngUrl);
+          lastGeneratedPngUrl = null;
+        }
+        sharePreviewImg.src = dataUrl;
+        shareModal.classList.remove('hidden');
+      }
+
+      async function handleSendImageAction() {
+        const textSummary = buildShareTextSummary();
+        if (lastGeneratedPngBlob && typeof File === 'function') {
+          const pngFile = new File([lastGeneratedPngBlob], 'emoji-slots-record.png', { type: 'image/png' });
+          if (navigator.canShare && navigator.canShare({ files: [pngFile] })) {
+            try {
+              await navigator.share({
+                title: 'Эмодзи-Слоты — Карточка игрока',
+                text: textSummary,
+                files: [pngFile]
+              });
+              showStatus('Карточка отправлена!', 'win');
+              return;
+            } catch (err) {
+              if (err && err.name === 'AbortError') return;
+            }
+          }
+        }
+
+        downloadPngBlob(lastGeneratedPngBlob, sharePreviewImg.src);
+        await copyShareTextFallback(textSummary);
+        showStatus('PNG скачан, а текст скопирован в буфер!', 'win');
+        vibrate([20, 30, 40]);
+      }
+
+      // --- Обработчики событий ---
+      fastSkipBtn.addEventListener('click', () => {
+        SoundFX.getCtx();
+        fastSkipEnabled = !fastSkipEnabled;
+        SoundFX.tick(fastSkipEnabled ? 780 : 420, 0.05);
+        vibrate(15);
+        saveProgress();
+        showStatus(
+          fastSkipEnabled ? '⚡ Быстрый пропуск промахов: ВКЛ' : '⚡ Быстрый пропуск промахов: ВЫКЛ',
+          'info'
+        );
+        updateUI();
+      });
+
       soundToggleBtn.addEventListener('click', () => {
         const on = SoundFX.toggle();
         soundToggleBtn.textContent = on ? '🔊' : '🔇';
+        if (on) vibrate(15);
+      });
+
+      achievementsBtn.addEventListener('click', openAchievementsModal);
+      closeAchievementsBtn.addEventListener('click', () => achievementsModal.classList.add('hidden'));
+      achievementsModal.addEventListener('click', e => {
+        if (e.target === achievementsModal) achievementsModal.classList.add('hidden');
+      });
+
+      resetProgressBtn.addEventListener('click', () => {
+        if (!resetProgressBtn.classList.contains('confirming')) {
+          resetProgressBtn.classList.add('confirming');
+          resetProgressBtn.textContent = '⚠️ Нажми ещё раз для полного сброса';
+          vibrate(25);
+          resetConfirmTimer = setTimeout(() => {
+            resetProgressBtn.classList.remove('confirming');
+            resetProgressBtn.textContent = '🔄 Сбросить весь прогресс';
+            resetConfirmTimer = null;
+          }, 3500);
+        } else {
+          if (resetConfirmTimer) clearTimeout(resetConfirmTimer);
+          resetAllProgress();
+        }
       });
 
       betPills.forEach(pill => {
         pill.addEventListener('click', () => {
-          if (isSpinning || isCaptchaActive || isRouletteSpinning) return;
+          if (isSpinning || isRouletteSpinning || isDiamondSpinning || isCaptchaActive || pendingWin > 0) return;
           const raw = pill.dataset.bet;
-          betMode = raw === 'MAX' ? 'MAX' : Number(raw);
+          betMode = raw === 'MAX' || raw.startsWith('PCT_') ? raw : Number(raw);
           customBetInput.value = '';
           hideStatus();
           updateUI();
         });
       });
 
-      customBetInput.addEventListener('focus', () => {
-        if (isSpinning || isCaptchaActive || isRouletteSpinning) return;
-        betMode = 'CUSTOM';
-        if (!customBetInput.value) {
-          customBetInput.value = String(Math.max(1, Math.min(customBetAmount, balance || 1)));
-        }
-        customBetAmount = Math.floor(Number(customBetInput.value)) || 0;
-        updateUI();
-      });
-
       customBetInput.addEventListener('input', () => {
-        if (isSpinning || isCaptchaActive || isRouletteSpinning) return;
+        if (isSpinning || isRouletteSpinning || isDiamondSpinning || isCaptchaActive || pendingWin > 0) return;
         betMode = 'CUSTOM';
-        const digits = customBetInput.value.replace(/[^\d]/g, '');
-        if (customBetInput.value !== digits) customBetInput.value = digits;
-        customBetAmount = digits ? parseInt(digits, 10) : 0;
+        customBetAmount = Math.floor(Number(customBetInput.value));
         hideStatus();
         updateUI();
       });
 
-      nSlider.addEventListener('input', (e) => {
-        if (isSpinning || isCaptchaActive || isRouletteSpinning) return;
-        emojiCount = Number(e.target.value);
+      nSlider.addEventListener('input', () => {
+        if (isSpinning || isRouletteSpinning || isDiamondSpinning || isCaptchaActive || pendingWin > 0) return;
+        emojiCount = Number(nSlider.value);
         const pool = getActivePool();
-
-        // Сразу синхронизируем символы в слотах с новым пулом EMOJIS.slice(0, N)
-        reelBoxes.forEach(box => box.classList.remove('win', 'suspense'));
+        reelBoxes.forEach(box => box.classList.remove('win', 'suspense', 'gold-spin'));
         reelSymbols.forEach((sym, idx) => {
-          if (!pool.includes(sym.textContent)) {
-            sym.textContent = pool[idx % pool.length];
-          }
+          sym.textContent = pool[idx % pool.length];
         });
-
         hideStatus();
+        saveProgress();
         updateUI();
       });
 
-      spinBtn.addEventListener('click', spin);
-      dodepBtn.addEventListener('click', openDodepModal);
+      spinBtn.addEventListener('click', () => runSlotSpin(false));
+      goldSpinBtn.addEventListener('click', () => runSlotSpin(true));
+      collectWinBtn.addEventListener('click', collectPendingWin);
+      doubleRiskBtn.addEventListener('click', playDoubleRiskGame);
 
-      fastSkipBtn.addEventListener('click', () => {
-        SoundFX.getCtx();
-        fastSkipEnabled = !fastSkipEnabled;
-        SoundFX.tick(fastSkipEnabled ? 780 : 420, 0.05);
+      dodepBtn.addEventListener('click', openDodepRoulette);
+      closeDodepBtn.addEventListener('click', () => {
+        isRouletteSpinning = false;
+        dodepModal.classList.add('hidden');
         updateUI();
       });
-
-      closeDodepBtn.addEventListener('click', closeDodepModal);
-      spinRouletteBtn.addEventListener('click', spinDodepRoulette);
-
-      document.addEventListener('keydown', (e) => {
-        if (e.code === 'Space' && !isSpinning && !isCaptchaActive && !isRouletteSpinning) {
-          if (document.activeElement === customBetInput) return;
-          e.preventDefault();
-          spin();
+      dodepModal.addEventListener('click', e => {
+        if (e.target === dodepModal) {
+          isRouletteSpinning = false;
+          dodepModal.classList.add('hidden');
+          updateUI();
         }
       });
 
-      // Инициализация при старте
-      shuffleDeck();
+      diamondSpinBtn.addEventListener('click', openDiamondWheelModal);
+      closeDiamondBtn.addEventListener('click', () => {
+        isDiamondSpinning = false;
+        diamondSpinIsFreeTicket = false;
+        diamondModal.classList.add('hidden');
+        updateUI();
+      });
+      diamondModal.addEventListener('click', e => {
+        if (e.target === diamondModal) {
+          isDiamondSpinning = false;
+          diamondSpinIsFreeTicket = false;
+          diamondModal.classList.add('hidden');
+          updateUI();
+        }
+      });
+
+      document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') {
+          if (!dodepModal.classList.contains('hidden')) {
+            isRouletteSpinning = false;
+            dodepModal.classList.add('hidden');
+          }
+          if (!diamondModal.classList.contains('hidden')) {
+            isDiamondSpinning = false;
+            diamondSpinIsFreeTicket = false;
+            diamondModal.classList.add('hidden');
+          }
+          if (!achievementsModal.classList.contains('hidden')) {
+            achievementsModal.classList.add('hidden');
+          }
+          if (!shareModal.classList.contains('hidden')) {
+            shareModal.classList.add('hidden');
+          }
+          updateUI();
+        }
+      });
+
+      colorChoiceBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          spinDiamondWheel(btn.dataset.color);
+        });
+      });
+
+      shareBtn.addEventListener('click', openShareCardModal);
+      closeShareModalBtn.addEventListener('click', () => shareModal.classList.add('hidden'));
+      shareModal.addEventListener('click', e => {
+        if (e.target === shareModal) shareModal.classList.add('hidden');
+      });
+
+      shareNativeImgBtn.addEventListener('click', handleSendImageAction);
+      downloadPngBtn.addEventListener('click', () => {
+        downloadPngBlob(lastGeneratedPngBlob, sharePreviewImg.src);
+        showStatus('Файл emoji-slots-record.png сохранён!', 'win');
+        vibrate(20);
+      });
+      copyTextCheckBtn.addEventListener('click', async () => {
+        await copyShareTextFallback(buildShareTextSummary());
+        showStatus('Текстовый чек скопирован в буфер обмена!', 'win');
+        vibrate(20);
+      });
+
+      // --- Инициализация при запуске ---
+      initDiamondWheelVisuals();
+      loadProgress();
+      const initialPool = getActivePool();
+      reelSymbols.forEach((sym, idx) => {
+        sym.textContent = initialPool[idx % initialPool.length];
+      });
       updateUI();
     });
   </script>
